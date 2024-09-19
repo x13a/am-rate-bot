@@ -1,5 +1,7 @@
 services:
   web:
     build: .
+    image: 'am-rate-bot'
+    container_name: 'am-rate-bot'
     env_file:
       - 'config/bot.env'

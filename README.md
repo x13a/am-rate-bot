@@ -1,15 +1,16 @@
 # am-rate-bot
 
-Armenia currency exchange rates telegram bot
+Armenia currency exchange rates telegram bot.
 
 You can try it on [Telegram](https://t.me/am_rate_bot).
-You have to set `TELOXIDE_TOKEN` env to your telegram bot token in `config/bot.env`.
 
-## Make
+## Setup
 
 ```shell
-$ make docker
+$ make fix-config
 ```
+
+You have to set `TELOXIDE_TOKEN` env to your telegram bot token in `config/bot.env`.
 
 ## Run
 

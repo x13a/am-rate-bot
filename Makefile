@@ -1,30 +1,8 @@
-NAME        := am-rate-bot
-
-prefix      ?= /usr/local
-exec_prefix ?= $(prefix)
-bindir      ?= $(exec_prefix)/bin
-
-bindestdir  := $(DESTDIR)$(bindir)
-
+NAME := am-rate-bot
 all: build
 
 build:
 	cargo build --locked --release --bins
-
-cargo-install:
-	cargo install --locked --path "."
-
-cargo-uninstall:
-	cargo uninstall --locked $(NAME)
-
-installdirs:
-	install -d $(bindestdir)/
-
-install: installdirs
-	install ./target/release/$(NAME) $(bindestdir)/
-
-uninstall:
-	rm -f $(bindestdir)/$(NAME)
 
 test:
 	cargo test
@@ -35,5 +13,8 @@ clean:
 docker:
 	docker build . -t $(NAME)
 
-clean-docker:
+docker-clean:
 	docker rmi $(NAME)
+
+fix-config:
+	chmod 600 ./config/bot.env

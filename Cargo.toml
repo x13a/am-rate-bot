@@ -1,0 +1,19 @@
+[package]
+name = "am-rate-bot"
+version = "0.1.0"
+edition = "2021"
+authors = ["lucky"]
+
+[dependencies]
+argh = "0.1.12"
+const_format = "0.2"
+env_logger = "0.11.5"
+log = "0.4.22"
+quick-xml = { version = "0.36", features = ["serialize"] }
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+teloxide = { version = "0.13", features = ["macros"] }
+tokio = { version = "1", features = ["full"] }
+
+[dev-dependencies]
+serde_json = "1.0"

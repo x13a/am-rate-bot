@@ -1,5 +1,5 @@
-use crate::sources::utils::{de_currency, de_u8};
-use crate::sources::{Currency as SourceCurrency, SourceSingleUrlTrait};
+use crate::sources::utils::{de_currency, de_rate_type, de_u8};
+use crate::sources::{Currency as SourceCurrency, RateType, SourceSingleUrlTrait};
 use serde::Deserialize;
 
 const API_URL: &str = "https://sapi.conversebank.am/api/v2/currencyrates";
@@ -29,8 +29,8 @@ pub struct Item {
     pub sell: f64,
     pub sell_diff: f64,
     pub rate_date: String,
-    #[serde(rename = "type")]
-    pub rate_type: String,
+    #[serde(rename = "type", deserialize_with = "de_rate_type")]
+    pub rate_type: RateType,
     #[serde(deserialize_with = "de_currency")]
     pub iso2: SourceCurrency,
     pub created_at: String,

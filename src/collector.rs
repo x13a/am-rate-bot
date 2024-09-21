@@ -1,7 +1,7 @@
 use crate::sources;
 use crate::sources::{
-    acba, aeb, ameria, ardshin, arm_swiss, cba, converse, evoca, fast, ineco, mellat, Currency,
-    RateType, Source, SourceCashUrlTrait, SourceSingleUrlTrait,
+    acba, aeb, ameria, ardshin, arm_swiss, cba, converse, evoca, fast, ineco, mellat, vtb,
+    Currency, RateType, Source, SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
 use std::collections::HashMap;
@@ -66,6 +66,7 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::Mellat => collect_mellat(&client).await?,
         Source::Converse => collect_converse(&client).await?,
         Source::AEB => collect_aeb(&client).await?,
+        Source::VTB => collect_vtb(&client).await?,
     };
     Ok(rates)
 }
@@ -279,7 +280,27 @@ async fn collect_aeb(client: &Client) -> Result<Vec<Rate>, Error> {
                 rate_type: RateType::NoCash,
                 buy: rate.buy_rate.unwrap(),
                 sell: rate.sell_rate.unwrap(),
-            })
+            });
+        }
+    }
+    Ok(rates)
+}
+
+async fn collect_vtb(client: &Client) -> Result<Vec<Rate>, Error> {
+    let vtb: vtb::Response = vtb::Response::get_rates(&client).await?;
+    let mut rates = vec![];
+    for item in vtb
+        .items
+        .iter()
+        .filter(|v| v.category_id == "internaltransfer")
+    {
+        for item in item.rates.items.iter().filter(|v| v.sell.is_some()) {
+            rates.push(Rate {
+                currency: item.base.currency.clone(),
+                rate_type: RateType::NoCash,
+                buy: item.sell.as_ref().unwrap().min,
+                sell: item.buy.min,
+            });
         }
     }
     Ok(rates)
@@ -363,6 +384,13 @@ mod tests {
     async fn test_collect_aeb() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::AEB).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_vtb() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::VTB).await?;
         Ok(())
     }
 }

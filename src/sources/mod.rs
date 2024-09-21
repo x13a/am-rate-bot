@@ -16,6 +16,7 @@ pub mod fast;
 pub mod ineco;
 pub mod mellat;
 mod utils;
+pub mod vtb;
 
 pub trait SourceSingleUrlTrait {
     fn url() -> String;
@@ -58,6 +59,7 @@ pub enum Source {
     Mellat,
     Converse,
     AEB,
+    VTB,
 }
 
 impl Source {
@@ -74,6 +76,7 @@ impl Source {
             Self::Mellat,
             Self::Converse,
             Self::AEB,
+            Self::VTB,
         ]
         .iter()
         .copied()
@@ -101,6 +104,7 @@ impl Display for Source {
             Source::Mellat => "Mellat".into(),
             Source::Converse => "Converse".into(),
             Source::AEB => "AEB".into(),
+            Source::VTB => "VTB".into(),
         };
         write!(f, "{}", s)
     }
@@ -315,6 +319,13 @@ pub(crate) mod tests {
     async fn test_aeb() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         let _: aeb::Response = aeb::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_vtb() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: vtb::Response = vtb::Response::get_rates(&c).await?;
         Ok(())
     }
 }

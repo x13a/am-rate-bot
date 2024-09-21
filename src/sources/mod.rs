@@ -174,7 +174,7 @@ impl FromStr for RateType {
             "NO CASH" | "NON CASH" | "NO_CASH" | "NON_CASH" => Self::NoCash,
             "CASH" => Self::Cash,
             "CARD" => Self::Card,
-            "ONLINE" => Self::Card,
+            "ONLINE" => Self::Online,
             "CROSS" => Self::Cross,
             "CB" => Self::CB,
             "METAL" => Self::Metal,

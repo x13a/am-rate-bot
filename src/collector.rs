@@ -1,7 +1,7 @@
 use crate::sources;
 use crate::sources::{
-    acba, ameria, ardshin, arm_swiss, cba, evoca, fast, ineco, mellat, Currency, RateType, Source,
-    SourceCashUrlTrait, SourceSingleUrlTrait,
+    acba, ameria, ardshin, arm_swiss, cba, converse, evoca, fast, ineco, mellat, Currency,
+    RateType, Source, SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
 use std::collections::HashMap;
@@ -64,6 +64,7 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::Fast => collect_fast(&client).await?,
         Source::Ineco => collect_ineco(&client).await?,
         Source::Mellat => collect_mellat(&client).await?,
+        Source::Converse => collect_converse(&client).await?,
     };
     Ok(rates)
 }
@@ -250,6 +251,21 @@ async fn collect_mellat(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
+async fn collect_converse(client: &Client) -> Result<Vec<Rate>, Error> {
+    let converse: converse::Response = converse::Response::get_rates(&client).await?;
+    let rates = converse
+        .non_cash
+        .iter()
+        .map(|v| Rate {
+            currency: v.currency.iso.clone(),
+            rate_type: RateType::NoCash,
+            buy: v.buy,
+            sell: v.sell,
+        })
+        .collect();
+    Ok(rates)
+}
+
 mod tests {
     use super::*;
     use crate::sources::tests::build_client;
@@ -314,6 +330,13 @@ mod tests {
     async fn test_collect_mellat() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::Mellat).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_converse() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::Converse).await?;
         Ok(())
     }
 }

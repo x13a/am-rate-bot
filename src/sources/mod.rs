@@ -9,6 +9,7 @@ pub mod ameria;
 pub mod ardshin;
 pub mod arm_swiss;
 pub mod cba;
+pub mod converse;
 pub mod evoca;
 pub mod fast;
 pub mod ineco;
@@ -54,6 +55,7 @@ pub enum Source {
     Fast,
     Ineco,
     Mellat,
+    Converse,
 }
 
 impl Source {
@@ -68,6 +70,7 @@ impl Source {
             Self::Fast,
             Self::Ineco,
             Self::Mellat,
+            Self::Converse,
         ]
         .iter()
         .copied()
@@ -93,6 +96,7 @@ impl Display for Source {
             Source::Fast => "Fast".into(),
             Source::Ineco => "Ineco".into(),
             Source::Mellat => "Mellat".into(),
+            Source::Converse => "Converse".into(),
         };
         write!(f, "{}", s)
     }
@@ -155,6 +159,7 @@ pub enum RateType {
     Online = 3,
     Cross = 4,
     CB = 5,
+    Metal = 6,
 }
 
 #[derive(Debug, Deserialize)]
@@ -274,6 +279,13 @@ pub(crate) mod tests {
     async fn test_cba() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         let _: cba::Response = cba::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_converse() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: converse::Response = converse::Response::get_rates(&c).await?;
         Ok(())
     }
 }

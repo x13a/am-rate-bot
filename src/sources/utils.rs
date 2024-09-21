@@ -1,4 +1,4 @@
-use crate::sources::Currency;
+use crate::sources::{Currency, RateType};
 use serde::{de, Deserialize, Deserializer};
 use serde_json::Value;
 use std::str::FromStr;
@@ -30,7 +30,16 @@ where
     let rv = match Value::deserialize(deserializer)? {
         Value::String(s) => s.parse().map_err(de::Error::custom)?,
         Value::Number(n) => n.as_u64().ok_or(de::Error::custom(""))? as u8,
-        _ => Err(de::Error::custom(""))?,
+        _ => return Err(de::Error::custom("")),
     };
     Ok(rv)
+}
+
+pub(crate) fn de_rate_type<'de, D>(deserializer: D) -> Result<RateType, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    let rt = RateType::from_str(&s).map_err(de::Error::custom)?;
+    Ok(rt)
 }

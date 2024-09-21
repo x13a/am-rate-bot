@@ -5,6 +5,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
 pub mod acba;
+pub mod aeb;
 pub mod ameria;
 pub mod ardshin;
 pub mod arm_swiss;
@@ -56,6 +57,7 @@ pub enum Source {
     Ineco,
     Mellat,
     Converse,
+    AEB,
 }
 
 impl Source {
@@ -71,6 +73,7 @@ impl Source {
             Self::Ineco,
             Self::Mellat,
             Self::Converse,
+            Self::AEB,
         ]
         .iter()
         .copied()
@@ -97,6 +100,7 @@ impl Display for Source {
             Source::Ineco => "Ineco".into(),
             Source::Mellat => "Mellat".into(),
             Source::Converse => "Converse".into(),
+            Source::AEB => "AEB".into(),
         };
         write!(f, "{}", s)
     }
@@ -160,6 +164,24 @@ pub enum RateType {
     Cross = 4,
     CB = 5,
     Metal = 6,
+}
+
+impl FromStr for RateType {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let rt = match s.to_uppercase().as_str() {
+            "NO CASH" | "NON CASH" | "NO_CASH" | "NON_CASH" => Self::NoCash,
+            "CASH" => Self::Cash,
+            "CARD" => Self::Card,
+            "ONLINE" => Self::Card,
+            "CROSS" => Self::Cross,
+            "CB" => Self::CB,
+            "METAL" => Self::Metal,
+            _ => return Err(Error::InvalidRateType),
+        };
+        Ok(rt)
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -286,6 +308,13 @@ pub(crate) mod tests {
     async fn test_converse() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         let _: converse::Response = converse::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aeb() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: aeb::Response = aeb::Response::get_rates(&c).await?;
         Ok(())
     }
 }

@@ -7,18 +7,18 @@ const API_URL: &str = "https://www.armswissbank.am/include/ajax.php";
 #[derive(Debug, Deserialize)]
 pub struct Response {
     pub lmasbrate: Vec<LmasbRate>,
-    // pub imworldcuratesusd: Vec<ImWorldCuRatesUSD>,
-    // pub imcuioil: Vec<ImCui>,
-    // pub imcuigold: Vec<ImCui>,
-    // pub imwmius: Vec<ImWmi>,
-    // pub imwmiasiapac: Vec<ImWmi>,
-    // pub imwmieurus: Vec<ImWmi>,
-    // pub imlibor: Vec<ImlIbor>,
-    // pub imeuribor: Vec<ImEurIbor>,
-    // #[serde(rename = "lmgoldRate")]
-    // pub lmgold_rate: Vec<LmGoldRate>,
-    // pub imusakey: Vec<ImKey>,
-    // pub imeukey: Vec<ImKey>,
+    pub imworldcuratesusd: Vec<ImWorldCuRatesUSD>,
+    pub imcuioil: Vec<ImCui>,
+    pub imcuigold: Vec<ImCui>,
+    pub imwmius: Vec<ImWmi>,
+    pub imwmiasiapac: Vec<ImWmi>,
+    pub imwmieurus: Vec<ImWmi>,
+    pub imlibor: Vec<ImlIbor>,
+    pub imeuribor: Vec<ImEurIbor>,
+    #[serde(rename = "lmgoldRate")]
+    pub lmgold_rate: Vec<LmGoldRate>,
+    pub imusakey: Vec<ImKey>,
+    pub imeukey: Vec<ImKey>,
 }
 
 impl SourceSingleUrlTrait for Response {

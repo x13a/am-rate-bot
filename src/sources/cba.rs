@@ -70,7 +70,7 @@ pub struct ExchangeRate {
 }
 
 impl Response {
-    fn url() -> String {
+    pub fn url() -> String {
         API_URL.into()
     }
 

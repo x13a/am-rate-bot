@@ -1,6 +1,6 @@
 use crate::sources;
 use crate::sources::{
-    acba, aeb, ameria, ardshin, arm_swiss, cba, converse, evoca, fast, ineco, mellat, vtb,
+    acba, aeb, ameria, ardshin, arm_swiss, artsakh, cba, converse, evoca, fast, ineco, mellat, vtb,
     Currency, RateType, Source, SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
@@ -67,6 +67,7 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::Converse => collect_converse(&client).await?,
         Source::AEB => collect_aeb(&client).await?,
         Source::VTB => collect_vtb(&client).await?,
+        Source::Artsakh => collect_artsakh(&client).await?,
     };
     Ok(rates)
 }
@@ -306,6 +307,25 @@ async fn collect_vtb(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
+async fn collect_artsakh(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: artsakh::Response = artsakh::Response::get_rates(&client).await?;
+    let items = resp
+        .get_currency_list
+        .currency_list
+        .ok_or(Error::NoRates)?;
+    let rates = items
+        .iter()
+        .filter(|v| v.sell.is_some() && v.buy.is_some())
+        .map(|v| Rate {
+            currency: v.external_id.clone(),
+            rate_type: RateType::NoCash,
+            buy: v.buy.unwrap(),
+            sell: v.sell.unwrap(),
+        })
+        .collect();
+    Ok(rates)
+}
+
 mod tests {
     use super::*;
     use crate::sources::tests::build_client;
@@ -391,6 +411,13 @@ mod tests {
     async fn test_collect_vtb() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::VTB).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_artsakh() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::Artsakh).await?;
         Ok(())
     }
 }

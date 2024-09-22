@@ -9,6 +9,7 @@ pub mod aeb;
 pub mod ameria;
 pub mod ardshin;
 pub mod arm_swiss;
+pub mod artsakh;
 pub mod cba;
 pub mod converse;
 pub mod evoca;
@@ -60,6 +61,7 @@ pub enum Source {
     Converse,
     AEB,
     VTB,
+    Artsakh,
 }
 
 impl Source {
@@ -77,6 +79,7 @@ impl Source {
             Self::Converse,
             Self::AEB,
             Self::VTB,
+            Self::Artsakh,
         ]
         .iter()
         .copied()
@@ -105,6 +108,7 @@ impl Display for Source {
             Source::Converse => "Converse".into(),
             Source::AEB => "AEB".into(),
             Source::VTB => "VTB".into(),
+            Source::Artsakh => "Artsakh".into(),
         };
         write!(f, "{}", s)
     }
@@ -326,6 +330,14 @@ pub(crate) mod tests {
     async fn test_vtb() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         let _: vtb::Response = vtb::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_artsakh() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let s: artsakh::Response = artsakh::Response::get_rates(&c).await?;
+        println!("{:?}", s);
         Ok(())
     }
 }

@@ -1,7 +1,7 @@
 use crate::sources;
 use crate::sources::{
-    acba, aeb, ameria, armsoft, ardshin, arm_swiss, artsakh, lsoft, cba, converse,
-    evoca, fast, ineco, mellat, uni, vtb, Currency, RateType, Source, SourceAphenaTrait,
+    acba, aeb, ameria, amio, ardshin, arm_swiss, armsoft, artsakh, byblos, cba, converse, evoca,
+    fast, ineco, lsoft, mellat, uni, vtb, Currency, RateType, Source, SourceAphenaTrait,
     SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
@@ -70,6 +70,8 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::VTB => collect_vtb(&client).await?,
         Source::Artsakh => collect_artsakh(&client).await?,
         Source::Uni => collect_uni(&client).await?,
+        Source::Amio => collect_amio(&client).await?,
+        Source::Byblos => collect_byblos(&client).await?,
     };
     Ok(rates)
 }
@@ -123,8 +125,7 @@ pub(crate) fn parse_acba(acba: acba::Response) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_ameria(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: armsoft::Response =
-        ameria::Response::get_rates(&client, RateType::NoCash).await?;
+    let resp: armsoft::Response = ameria::Response::get_rates(&client, RateType::NoCash).await?;
     let rates = collect_armsoft(resp);
     Ok(rates)
 }
@@ -193,8 +194,7 @@ async fn collect_cba(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_evoca(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: armsoft::Response =
-        evoca::Response::get_rates(&client, RateType::NoCash).await?;
+    let resp: armsoft::Response = evoca::Response::get_rates(&client, RateType::NoCash).await?;
     let rates = collect_armsoft(resp);
     Ok(rates)
 }
@@ -329,6 +329,18 @@ fn collect_lsoft(resp: lsoft::Response) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
+async fn collect_amio(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: armsoft::Response = amio::Response::get_rates(&client, RateType::NoCash).await?;
+    let rates = collect_armsoft(resp);
+    Ok(rates)
+}
+
+async fn collect_byblos(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: armsoft::Response = byblos::Response::get_rates(&client, RateType::NoCash).await?;
+    let rates = collect_armsoft(resp);
+    Ok(rates)
+}
+
 mod tests {
     use super::*;
     use crate::sources::tests::build_client;
@@ -428,6 +440,20 @@ mod tests {
     async fn test_collect_uni() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::Uni).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_amio() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::Amio).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_byblos() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::Byblos).await?;
         Ok(())
     }
 }

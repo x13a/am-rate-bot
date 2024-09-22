@@ -6,16 +6,18 @@ use std::str::FromStr;
 pub mod acba;
 pub mod aeb;
 pub mod ameria;
-pub mod armsoft;
+pub mod amio;
 pub mod ardshin;
 pub mod arm_swiss;
+pub mod armsoft;
 pub mod artsakh;
-pub mod lsoft;
+pub mod byblos;
 pub mod cba;
 pub mod converse;
 pub mod evoca;
 pub mod fast;
 pub mod ineco;
+pub mod lsoft;
 pub mod mellat;
 pub mod uni;
 mod utils;
@@ -65,6 +67,8 @@ pub enum Source {
     VTB,
     Artsakh,
     Uni,
+    Amio,
+    Byblos,
 }
 
 impl Source {
@@ -84,6 +88,8 @@ impl Source {
             Self::VTB,
             Self::Artsakh,
             Self::Uni,
+            Self::Amio,
+            Self::Byblos,
         ]
         .iter()
         .copied()
@@ -114,6 +120,8 @@ impl Display for Source {
             Source::VTB => "VTB".into(),
             Source::Artsakh => "Artsakh".into(),
             Source::Uni => "Uni".into(),
+            Source::Amio => "Amio".into(),
+            Source::Byblos => "Byblos".into(),
         };
         write!(f, "{}", s)
     }
@@ -337,6 +345,24 @@ pub(crate) mod tests {
     async fn test_uni() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         let _: lsoft::Response = uni::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_amio() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: armsoft::Response = amio::Response::get_rates(&c, RateType::NoCash).await?;
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        let _: armsoft::Response = amio::Response::get_rates(&c, RateType::Cash).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_byblos() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: armsoft::Response = byblos::Response::get_rates(&c, RateType::NoCash).await?;
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        let _: armsoft::Response = byblos::Response::get_rates(&c, RateType::Cash).await?;
         Ok(())
     }
 }

@@ -2,7 +2,7 @@ use crate::sources::utils::de_currency;
 use crate::sources::{Currency, SourceSingleUrlTrait};
 use serde::Deserialize;
 
-const API_URL: &str = "https://online.vtb.am/dbo/api/v1/currencies/rates";
+pub const API_URL: &str = "https://online.vtb.am/dbo/api/v1/currencies/rates";
 
 impl SourceSingleUrlTrait for Response {
     fn url() -> String {

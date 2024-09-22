@@ -1,6 +1,6 @@
 use crate::sources::artsakh_uni::SourceAphenaTrait;
 
-pub const API_URL: &str = "https://m.artsakhbank.am:9443/get_ART.php";
+pub const API_URL: &str = "https://force.unibank.am:9443/xmlParser_mob.php";
 
 pub struct Response;
 

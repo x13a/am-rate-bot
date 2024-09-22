@@ -1,13 +1,8 @@
-use crate::sources::{ExchangeRate, RateType, SourceCashUrlTrait};
-use serde::Deserialize;
+use crate::sources::{RateType, SourceCashUrlTrait};
 
-const API_URL: &str = "https://online.ameriabank.am/InternetBank/Api/exchangeRates";
+pub const API_URL: &str = "https://online.ameriabank.am/InternetBank/Api/exchangeRates";
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase", transparent)]
-pub struct Response {
-    pub array_of_exchange_rate: Vec<ExchangeRate>,
-}
+pub struct Response;
 
 impl SourceCashUrlTrait for Response {
     fn url_cash() -> String {

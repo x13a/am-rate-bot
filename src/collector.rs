@@ -1,7 +1,8 @@
 use crate::sources;
 use crate::sources::{
-    acba, aeb, ameria, ardshin, arm_swiss, artsakh, cba, converse, evoca, fast, ineco, mellat, vtb,
-    Currency, RateType, Source, SourceCashUrlTrait, SourceSingleUrlTrait,
+    acba, aeb, ameria, ameria_evoca, ardshin, arm_swiss, artsakh, artsakh_uni, cba, converse,
+    evoca, fast, ineco, mellat, uni, vtb, Currency, RateType, Source, SourceAphenaTrait,
+    SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
 use std::collections::HashMap;
@@ -68,6 +69,7 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::AEB => collect_aeb(&client).await?,
         Source::VTB => collect_vtb(&client).await?,
         Source::Artsakh => collect_artsakh(&client).await?,
+        Source::Uni => collect_uni(&client).await?,
     };
     Ok(rates)
 }
@@ -121,9 +123,14 @@ pub(crate) fn parse_acba(acba: acba::Response) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_ameria(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: ameria::Response = ameria::Response::get_rates(&client, RateType::NoCash).await?;
-    let rates = resp
-        .array_of_exchange_rate
+    let resp: ameria_evoca::Response =
+        ameria::Response::get_rates(&client, RateType::NoCash).await?;
+    let rates = collect_ameria_evoca(resp);
+    Ok(rates)
+}
+
+fn collect_ameria_evoca(resp: ameria_evoca::Response) -> Vec<Rate> {
+    resp.array_of_exchange_rate
         .iter()
         .map(|v| Rate {
             currency: v.currency.clone(),
@@ -131,8 +138,7 @@ async fn collect_ameria(client: &Client) -> Result<Vec<Rate>, Error> {
             buy: v.purchase,
             sell: v.sale,
         })
-        .collect();
-    Ok(rates)
+        .collect()
 }
 
 async fn collect_ardshin(client: &Client) -> Result<Vec<Rate>, Error> {
@@ -187,17 +193,9 @@ async fn collect_cba(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_evoca(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: evoca::Response = evoca::Response::get_rates(&client, RateType::NoCash).await?;
-    let rates = resp
-        .array_of_exchange_rate
-        .iter()
-        .map(|v| Rate {
-            currency: v.currency.clone(),
-            rate_type: RateType::NoCash,
-            buy: v.purchase,
-            sell: v.sale,
-        })
-        .collect();
+    let resp: ameria_evoca::Response =
+        evoca::Response::get_rates(&client, RateType::NoCash).await?;
+    let rates = collect_ameria_evoca(resp);
     Ok(rates)
 }
 
@@ -305,11 +303,19 @@ async fn collect_vtb(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_artsakh(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: artsakh::Response = artsakh::Response::get_rates(&client).await?;
-    let items = resp
-        .get_currency_list
-        .currency_list
-        .ok_or(Error::NoRates)?;
+    let resp: artsakh_uni::Response = artsakh::Response::get_rates(&client).await?;
+    let rates = collect_artsakh_uni(resp)?;
+    Ok(rates)
+}
+
+async fn collect_uni(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: artsakh_uni::Response = uni::Response::get_rates(&client).await?;
+    let rates = collect_artsakh_uni(resp)?;
+    Ok(rates)
+}
+
+fn collect_artsakh_uni(resp: artsakh_uni::Response) -> Result<Vec<Rate>, Error> {
+    let items = resp.get_currency_list.currency_list.ok_or(Error::NoRates)?;
     let rates = items
         .iter()
         .filter(|v| v.sell.is_some() && v.buy.is_some())
@@ -415,6 +421,13 @@ mod tests {
     async fn test_collect_artsakh() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::Artsakh).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_uni() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::Uni).await?;
         Ok(())
     }
 }

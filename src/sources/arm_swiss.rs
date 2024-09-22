@@ -2,7 +2,7 @@ use crate::sources::utils::{de_currency, de_f64};
 use crate::sources::{Currency, SourceSingleUrlTrait};
 use serde::Deserialize;
 
-const API_URL: &str = "https://www.armswissbank.am/include/ajax.php";
+pub const API_URL: &str = "https://www.armswissbank.am/include/ajax.php";
 
 #[derive(Debug, Deserialize)]
 pub struct Response {

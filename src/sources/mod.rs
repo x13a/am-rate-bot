@@ -1,21 +1,23 @@
-use crate::sources::utils::de_currency;
+pub use artsakh_uni::SourceAphenaTrait;
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
 pub mod acba;
 pub mod aeb;
 pub mod ameria;
+pub mod ameria_evoca;
 pub mod ardshin;
 pub mod arm_swiss;
 pub mod artsakh;
+pub mod artsakh_uni;
 pub mod cba;
 pub mod converse;
 pub mod evoca;
 pub mod fast;
 pub mod ineco;
 pub mod mellat;
+pub mod uni;
 mod utils;
 pub mod vtb;
 
@@ -62,6 +64,7 @@ pub enum Source {
     AEB,
     VTB,
     Artsakh,
+    Uni,
 }
 
 impl Source {
@@ -80,6 +83,7 @@ impl Source {
             Self::AEB,
             Self::VTB,
             Self::Artsakh,
+            Self::Uni,
         ]
         .iter()
         .copied()
@@ -109,6 +113,7 @@ impl Display for Source {
             Source::AEB => "AEB".into(),
             Source::VTB => "VTB".into(),
             Source::Artsakh => "Artsakh".into(),
+            Source::Uni => "Uni".into(),
         };
         write!(f, "{}", s)
     }
@@ -192,18 +197,6 @@ impl FromStr for RateType {
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct ExchangeRate {
-    #[serde(rename = "CBRate")]
-    pub cb_rate: f64,
-    #[serde(deserialize_with = "de_currency")]
-    pub currency: Currency,
-    pub purchase: f64,
-    pub rate_for: u16,
-    pub sale: f64,
-}
-
 #[derive(Debug)]
 pub enum Error {
     Reqwest(reqwest::Error),
@@ -253,9 +246,9 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_ameria() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        let _: ameria::Response = ameria::Response::get_rates(&c, RateType::NoCash).await?;
+        let _: ameria_evoca::Response = ameria::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
-        let _: ameria::Response = ameria::Response::get_rates(&c, RateType::Cash).await?;
+        let _: ameria_evoca::Response = ameria::Response::get_rates(&c, RateType::Cash).await?;
         Ok(())
     }
 
@@ -269,9 +262,9 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_evoca() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        let _: evoca::Response = evoca::Response::get_rates(&c, RateType::NoCash).await?;
+        let _: ameria_evoca::Response = evoca::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
-        let _: evoca::Response = evoca::Response::get_rates(&c, RateType::Cash).await?;
+        let _: ameria_evoca::Response = evoca::Response::get_rates(&c, RateType::Cash).await?;
         Ok(())
     }
 
@@ -336,9 +329,14 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_artsakh() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        let _: artsakh::Response = artsakh::Response::get_rates(&c).await?;
+        let _: artsakh_uni::Response = artsakh::Response::get_rates(&c).await?;
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_uni() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: artsakh_uni::Response = uni::Response::get_rates(&c).await?;
         Ok(())
     }
 }

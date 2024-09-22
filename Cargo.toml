@@ -6,7 +6,6 @@ authors = ["lucky"]
 
 [dependencies]
 argh = "0.1.12"
-const_format = "0.2"
 env_logger = "0.11.5"
 log = "0.4.22"
 quick-xml = { version = "0.36", features = ["serialize"] }

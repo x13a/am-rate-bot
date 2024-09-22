@@ -43,3 +43,15 @@ where
     let rt = RateType::from_str(&s).map_err(de::Error::custom)?;
     Ok(rt)
 }
+
+pub(crate) fn de_option_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    if s.is_empty() {
+        return Ok(None);
+    }
+    let f = s.parse::<f64>().map_err(de::Error::custom)?;
+    Ok(Some(f))
+}

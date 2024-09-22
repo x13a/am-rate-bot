@@ -336,8 +336,9 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_artsakh() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        let s: artsakh::Response = artsakh::Response::get_rates(&c).await?;
-        println!("{:?}", s);
+        let _: artsakh::Response = artsakh::Response::get_rates(&c).await?;
+        Ok(())
+    }
         Ok(())
     }
 }

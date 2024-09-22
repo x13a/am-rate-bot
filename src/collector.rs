@@ -93,15 +93,12 @@ impl Display for Error {
 impl std::error::Error for Error {}
 
 async fn collect_acba(client: &Client) -> Result<Vec<Rate>, Error> {
-    let acba: acba::Response = acba::Response::get_rates(&client).await?;
-    let rates = parse_acba(acba)?;
+    let resp: acba::Response = acba::Response::get_rates(&client).await?;
+    let rates = parse_acba(resp)?;
     Ok(rates)
 }
 
 pub(crate) fn parse_acba(acba: acba::Response) -> Result<Vec<Rate>, Error> {
-    if acba.result_code != 1 {
-        return Err(Error::NoRates);
-    }
     let result = acba.result.ok_or(Error::NoRates)?;
     let rates = result
         .rates
@@ -124,8 +121,8 @@ pub(crate) fn parse_acba(acba: acba::Response) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_ameria(client: &Client) -> Result<Vec<Rate>, Error> {
-    let ameria: ameria::Response = ameria::Response::get_rates(&client, RateType::NoCash).await?;
-    let rates = ameria
+    let resp: ameria::Response = ameria::Response::get_rates(&client, RateType::NoCash).await?;
+    let rates = resp
         .array_of_exchange_rate
         .iter()
         .map(|v| Rate {
@@ -139,8 +136,8 @@ async fn collect_ameria(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_ardshin(client: &Client) -> Result<Vec<Rate>, Error> {
-    let ardshin: ardshin::Response = ardshin::Response::get_rates(&client).await?;
-    let rates = ardshin
+    let resp: ardshin::Response = ardshin::Response::get_rates(&client).await?;
+    let rates = resp
         .data
         .currencies
         .no_cash
@@ -156,8 +153,8 @@ async fn collect_ardshin(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_arm_swiss(client: &Client) -> Result<Vec<Rate>, Error> {
-    let arm_swiss: arm_swiss::Response = arm_swiss::Response::get_rates(&client).await?;
-    let rates = arm_swiss
+    let resp: arm_swiss::Response = arm_swiss::Response::get_rates(&client).await?;
+    let rates = resp
         .lmasbrate
         .iter()
         .map(|v| Rate {
@@ -171,8 +168,8 @@ async fn collect_arm_swiss(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_cba(client: &Client) -> Result<Vec<Rate>, Error> {
-    let cba = cba::Response::get_rates(&client).await?;
-    let rates = cba
+    let resp = cba::Response::get_rates(&client).await?;
+    let rates = resp
         .soap_body
         .exchange_rates_latest_response
         .exchange_rates_latest_result
@@ -190,8 +187,8 @@ async fn collect_cba(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_evoca(client: &Client) -> Result<Vec<Rate>, Error> {
-    let evoca: evoca::Response = evoca::Response::get_rates(&client, RateType::NoCash).await?;
-    let rates = evoca
+    let resp: evoca::Response = evoca::Response::get_rates(&client, RateType::NoCash).await?;
+    let rates = resp
         .array_of_exchange_rate
         .iter()
         .map(|v| Rate {
@@ -205,9 +202,9 @@ async fn collect_evoca(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_fast(client: &Client) -> Result<Vec<Rate>, Error> {
-    let fast: fast::Response = fast::Response::get_rates(&client, RateType::NoCash).await?;
-    let result = fast.rates.ok_or(Error::NoRates)?;
-    let rates = result
+    let resp: fast::Response = fast::Response::get_rates(&client, RateType::NoCash).await?;
+    let items = resp.rates.ok_or(Error::NoRates)?;
+    let rates = items
         .iter()
         .map(|v| Rate {
             currency: v.id.clone(),
@@ -220,12 +217,12 @@ async fn collect_fast(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_ineco(client: &Client) -> Result<Vec<Rate>, Error> {
-    let ineco: ineco::Response = ineco::Response::get_rates(&client).await?;
-    if !ineco.success {
+    let resp: ineco::Response = ineco::Response::get_rates(&client).await?;
+    if !resp.success {
         return Err(Error::NoRates);
     }
-    let result = ineco.items.ok_or(Error::NoRates)?;
-    let rates = result
+    let items = resp.items.ok_or(Error::NoRates)?;
+    let rates = items
         .iter()
         .filter(|v| v.cashless.buy.is_some() && v.cashless.sell.is_some())
         .map(|v| Rate {
@@ -239,8 +236,8 @@ async fn collect_ineco(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_mellat(client: &Client) -> Result<Vec<Rate>, Error> {
-    let mellat: mellat::Response = mellat::Response::get_rates(&client).await?;
-    let result = mellat.result.ok_or(Error::NoRates)?;
+    let resp: mellat::Response = mellat::Response::get_rates(&client).await?;
+    let result = resp.result.ok_or(Error::NoRates)?;
     let rates = result
         .data
         .iter()
@@ -255,8 +252,8 @@ async fn collect_mellat(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_converse(client: &Client) -> Result<Vec<Rate>, Error> {
-    let converse: converse::Response = converse::Response::get_rates(&client).await?;
-    let rates = converse
+    let resp: converse::Response = converse::Response::get_rates(&client).await?;
+    let rates = resp
         .non_cash
         .iter()
         .map(|v| Rate {
@@ -270,9 +267,9 @@ async fn collect_converse(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_aeb(client: &Client) -> Result<Vec<Rate>, Error> {
-    let aeb: aeb::Response = aeb::Response::get_rates(&client).await?;
+    let resp: aeb::Response = aeb::Response::get_rates(&client).await?;
     let mut rates = vec![];
-    for item in aeb.rate_currency_settings {
+    for item in resp.rate_currency_settings {
         for rate in item.rates.iter().filter(|v| {
             v.rate_type == RateType::NoCash && v.buy_rate.is_some() && v.sell_rate.is_some()
         }) {
@@ -288,9 +285,9 @@ async fn collect_aeb(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_vtb(client: &Client) -> Result<Vec<Rate>, Error> {
-    let vtb: vtb::Response = vtb::Response::get_rates(&client).await?;
+    let resp: vtb::Response = vtb::Response::get_rates(&client).await?;
     let mut rates = vec![];
-    for item in vtb
+    for item in resp
         .items
         .iter()
         .filter(|v| v.category_id == "internaltransfer")

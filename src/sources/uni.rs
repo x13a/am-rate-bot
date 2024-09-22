@@ -1,4 +1,4 @@
-use crate::sources::artsakh_uni::SourceAphenaTrait;
+use crate::sources::lsoft::SourceAphenaTrait;
 
 pub const API_URL: &str = "https://force.unibank.am:9443/xmlParser_mob.php";
 

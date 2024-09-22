@@ -1,4 +1,4 @@
-pub use artsakh_uni::SourceAphenaTrait;
+pub use lsoft::SourceAphenaTrait;
 use serde::de::DeserializeOwned;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
@@ -6,11 +6,11 @@ use std::str::FromStr;
 pub mod acba;
 pub mod aeb;
 pub mod ameria;
-pub mod ameria_evoca;
+pub mod armsoft;
 pub mod ardshin;
 pub mod arm_swiss;
 pub mod artsakh;
-pub mod artsakh_uni;
+pub mod lsoft;
 pub mod cba;
 pub mod converse;
 pub mod evoca;
@@ -246,9 +246,9 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_ameria() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        let _: ameria_evoca::Response = ameria::Response::get_rates(&c, RateType::NoCash).await?;
+        let _: armsoft::Response = ameria::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
-        let _: ameria_evoca::Response = ameria::Response::get_rates(&c, RateType::Cash).await?;
+        let _: armsoft::Response = ameria::Response::get_rates(&c, RateType::Cash).await?;
         Ok(())
     }
 
@@ -262,9 +262,9 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_evoca() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        let _: ameria_evoca::Response = evoca::Response::get_rates(&c, RateType::NoCash).await?;
+        let _: armsoft::Response = evoca::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
-        let _: ameria_evoca::Response = evoca::Response::get_rates(&c, RateType::Cash).await?;
+        let _: armsoft::Response = evoca::Response::get_rates(&c, RateType::Cash).await?;
         Ok(())
     }
 
@@ -329,14 +329,14 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn test_artsakh() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        let _: artsakh_uni::Response = artsakh::Response::get_rates(&c).await?;
+        let _: lsoft::Response = artsakh::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_uni() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        let _: artsakh_uni::Response = uni::Response::get_rates(&c).await?;
+        let _: lsoft::Response = uni::Response::get_rates(&c).await?;
         Ok(())
     }
 }

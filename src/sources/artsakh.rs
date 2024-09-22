@@ -1,4 +1,4 @@
-use crate::sources::artsakh_uni::SourceAphenaTrait;
+use crate::sources::lsoft::SourceAphenaTrait;
 
 pub const API_URL: &str = "https://m.artsakhbank.am:9443/get_ART.php";
 

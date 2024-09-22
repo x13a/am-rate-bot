@@ -1,6 +1,6 @@
 use crate::sources;
 use crate::sources::{
-    acba, aeb, ameria, ameria_evoca, ardshin, arm_swiss, artsakh, artsakh_uni, cba, converse,
+    acba, aeb, ameria, armsoft, ardshin, arm_swiss, artsakh, lsoft, cba, converse,
     evoca, fast, ineco, mellat, uni, vtb, Currency, RateType, Source, SourceAphenaTrait,
     SourceCashUrlTrait, SourceSingleUrlTrait,
 };
@@ -123,13 +123,13 @@ pub(crate) fn parse_acba(acba: acba::Response) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_ameria(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: ameria_evoca::Response =
+    let resp: armsoft::Response =
         ameria::Response::get_rates(&client, RateType::NoCash).await?;
-    let rates = collect_ameria_evoca(resp);
+    let rates = collect_armsoft(resp);
     Ok(rates)
 }
 
-fn collect_ameria_evoca(resp: ameria_evoca::Response) -> Vec<Rate> {
+fn collect_armsoft(resp: armsoft::Response) -> Vec<Rate> {
     resp.array_of_exchange_rate
         .iter()
         .map(|v| Rate {
@@ -193,9 +193,9 @@ async fn collect_cba(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_evoca(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: ameria_evoca::Response =
+    let resp: armsoft::Response =
         evoca::Response::get_rates(&client, RateType::NoCash).await?;
-    let rates = collect_ameria_evoca(resp);
+    let rates = collect_armsoft(resp);
     Ok(rates)
 }
 
@@ -303,18 +303,18 @@ async fn collect_vtb(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_artsakh(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: artsakh_uni::Response = artsakh::Response::get_rates(&client).await?;
-    let rates = collect_artsakh_uni(resp)?;
+    let resp: lsoft::Response = artsakh::Response::get_rates(&client).await?;
+    let rates = collect_lsoft(resp)?;
     Ok(rates)
 }
 
 async fn collect_uni(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: artsakh_uni::Response = uni::Response::get_rates(&client).await?;
-    let rates = collect_artsakh_uni(resp)?;
+    let resp: lsoft::Response = uni::Response::get_rates(&client).await?;
+    let rates = collect_lsoft(resp)?;
     Ok(rates)
 }
 
-fn collect_artsakh_uni(resp: artsakh_uni::Response) -> Result<Vec<Rate>, Error> {
+fn collect_lsoft(resp: lsoft::Response) -> Result<Vec<Rate>, Error> {
     let items = resp.get_currency_list.currency_list.ok_or(Error::NoRates)?;
     let rates = items
         .iter()

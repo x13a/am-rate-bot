@@ -2,7 +2,7 @@ use crate::sources::utils::de_currency;
 use crate::sources::{Currency, SourceSingleUrlTrait};
 use serde::Deserialize;
 
-const API_URL: &str = "https://api.mellatbank.am/api/v1/rate/list";
+pub const API_URL: &str = "https://api.mellatbank.am/api/v1/rate/list";
 
 #[derive(Debug, Deserialize)]
 pub struct Response {

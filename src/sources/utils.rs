@@ -1,6 +1,5 @@
 use crate::sources::{Currency, RateType};
 use serde::{de, Deserialize, Deserializer};
-use serde_json::Value;
 use std::str::FromStr;
 
 pub(crate) fn de_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
@@ -23,18 +22,6 @@ where
     Ok(Currency::from_str(&s).expect("currency not supported"))
 }
 
-pub(crate) fn de_u8<'de, D>(deserializer: D) -> Result<u8, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let rv = match Value::deserialize(deserializer)? {
-        Value::String(s) => s.parse().map_err(de::Error::custom)?,
-        Value::Number(n) => n.as_u64().ok_or(de::Error::custom(""))? as u8,
-        _ => return Err(de::Error::custom("")),
-    };
-    Ok(rv)
-}
-
 pub(crate) fn de_rate_type<'de, D>(deserializer: D) -> Result<RateType, D::Error>
 where
     D: Deserializer<'de>,
@@ -42,16 +29,4 @@ where
     let s = String::deserialize(deserializer)?;
     let rt = RateType::from_str(&s).map_err(de::Error::custom)?;
     Ok(rt)
-}
-
-pub(crate) fn de_option_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    if s.is_empty() {
-        return Ok(None);
-    }
-    let f = s.parse::<f64>().map_err(de::Error::custom)?;
-    Ok(Some(f))
 }

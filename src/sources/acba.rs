@@ -2,7 +2,7 @@ use crate::sources::utils::{de_currency, de_f64};
 use crate::sources::{Currency as SourcesCurrency, SourceSingleUrlTrait};
 use serde::Deserialize;
 
-const API_URL: &str = "https://www.acbadigital.am/api/en/v2/rates";
+pub const API_URL: &str = "https://www.acbadigital.am/api/en/v2/rates";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]

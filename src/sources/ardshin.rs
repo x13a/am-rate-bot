@@ -2,7 +2,7 @@ use crate::sources::utils::{de_currency, de_f64};
 use crate::sources::{Currency as SourcesCurrency, SourceSingleUrlTrait};
 use serde::Deserialize;
 
-const API_URL: &str = "https://website-api.ardshinbank.am/currency";
+pub const API_URL: &str = "https://website-api.ardshinbank.am/currency";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]

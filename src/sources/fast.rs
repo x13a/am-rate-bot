@@ -2,7 +2,7 @@ use crate::sources::utils::de_currency;
 use crate::sources::{Currency, RateType, SourceCashUrlTrait};
 use serde::Deserialize;
 
-const API_URL: &str =
+pub const API_URL: &str =
     "https://mobileapi.fcc.am/FCBank.Mobile.Api_V2/api/publicInfo/getRates?langID=2&payType";
 
 #[derive(Debug, Deserialize)]

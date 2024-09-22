@@ -2,7 +2,7 @@ use crate::sources::utils::{de_currency, de_rate_type};
 use crate::sources::{Currency, RateType, SourceSingleUrlTrait};
 use serde::Deserialize;
 
-const API_URL: &str = "https://mobile.aeb.am/mobile-proxy-exchange-rates/rate-settings";
+pub const API_URL: &str = "https://mobile.aeb.am/mobile-proxy-exchange-rates/rate-settings";
 
 impl SourceSingleUrlTrait for Response {
     fn url() -> String {

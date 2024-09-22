@@ -3,8 +3,8 @@ use crate::sources::Currency;
 use crate::sources::Error;
 use serde::Deserialize;
 
-const API_URL: &str = "https://api.cba.am/exchangerates.asmx";
-const SOAP12_EXCHANGE_RATES_LATEST: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+pub const API_URL: &str = "https://api.cba.am/exchangerates.asmx";
+pub const SOAP12_EXCHANGE_RATES_LATEST: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
   <soap12:Body>
     <ExchangeRatesLatest xmlns="http://www.cba.am/" />

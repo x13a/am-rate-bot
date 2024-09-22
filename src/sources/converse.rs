@@ -1,8 +1,9 @@
-use crate::sources::utils::{de_currency, de_rate_type, de_u8};
+use crate::sources::utils::{de_currency, de_rate_type};
 use crate::sources::{Currency as SourceCurrency, RateType, SourceSingleUrlTrait};
-use serde::Deserialize;
+use serde::{de, Deserialize, Deserializer};
+use serde_json::Value;
 
-const API_URL: &str = "https://sapi.conversebank.am/api/v2/currencyrates";
+pub const API_URL: &str = "https://sapi.conversebank.am/api/v2/currencyrates";
 
 impl SourceSingleUrlTrait for Response {
     fn url() -> String {
@@ -52,4 +53,16 @@ pub struct Currency {
     pub status: u8,
     pub created_at: String,
     pub updated_at: String,
+}
+
+fn de_u8<'de, D>(deserializer: D) -> Result<u8, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let rv = match Value::deserialize(deserializer)? {
+        Value::String(s) => s.parse().map_err(de::Error::custom)?,
+        Value::Number(n) => n.as_u64().ok_or(de::Error::custom(""))? as u8,
+        _ => return Err(de::Error::custom("")),
+    };
+    Ok(rv)
 }

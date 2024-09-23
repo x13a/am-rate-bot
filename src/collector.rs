@@ -1,7 +1,7 @@
 use crate::sources;
 use crate::sources::{
     acba, aeb, ameria, amio, ardshin, arm_swiss, armsoft, artsakh, byblos, cba, converse, evoca,
-    fast, ineco, lsoft, mellat, uni, vtb, Currency, RateType, Source, SourceAphenaTrait,
+    fast, ineco, lsoft, mellat, unibank, vtb_am, Currency, RateType, Source, SourceAphenaTrait,
     SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
@@ -67,9 +67,9 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::Mellat => collect_mellat(&client).await?,
         Source::Converse => collect_converse(&client).await?,
         Source::AEB => collect_aeb(&client).await?,
-        Source::VTB => collect_vtb(&client).await?,
+        Source::VtbAm => collect_vtb_am(&client).await?,
         Source::Artsakh => collect_artsakh(&client).await?,
-        Source::Uni => collect_uni(&client).await?,
+        Source::UniBank => collect_unibank(&client).await?,
         Source::Amio => collect_amio(&client).await?,
         Source::Byblos => collect_byblos(&client).await?,
     };
@@ -282,8 +282,8 @@ async fn collect_aeb(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_vtb(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: vtb::Response = vtb::Response::get_rates(&client).await?;
+async fn collect_vtb_am(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: vtb_am::Response = vtb_am::Response::get_rates(&client).await?;
     let mut rates = vec![];
     for item in resp
         .items
@@ -308,8 +308,8 @@ async fn collect_artsakh(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_uni(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: lsoft::Response = uni::Response::get_rates(&client).await?;
+async fn collect_unibank(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: lsoft::Response = unibank::Response::get_rates(&client).await?;
     let rates = collect_lsoft(resp)?;
     Ok(rates)
 }
@@ -423,9 +423,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_collect_vtb() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_vtb_am() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        collect(&c, Source::VTB).await?;
+        collect(&c, Source::VtbAm).await?;
         Ok(())
     }
 
@@ -437,9 +437,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_collect_uni() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_unibank() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        collect(&c, Source::Uni).await?;
+        collect(&c, Source::UniBank).await?;
         Ok(())
     }
 

@@ -19,9 +19,9 @@ pub mod fast;
 pub mod ineco;
 pub mod lsoft;
 pub mod mellat;
-pub mod uni;
+pub mod unibank;
 mod utils;
-pub mod vtb;
+pub mod vtb_am;
 
 pub trait SourceSingleUrlTrait {
     fn url() -> String;
@@ -64,9 +64,9 @@ pub enum Source {
     Mellat,
     Converse,
     AEB,
-    VTB,
+    VtbAm,
     Artsakh,
-    Uni,
+    UniBank,
     Amio,
     Byblos,
 }
@@ -85,9 +85,9 @@ impl Source {
             Self::Mellat,
             Self::Converse,
             Self::AEB,
-            Self::VTB,
+            Self::VtbAm,
             Self::Artsakh,
-            Self::Uni,
+            Self::UniBank,
             Self::Amio,
             Self::Byblos,
         ]
@@ -117,9 +117,9 @@ impl Display for Source {
             Source::Mellat => "Mellat".into(),
             Source::Converse => "Converse".into(),
             Source::AEB => "AEB".into(),
-            Source::VTB => "VTB".into(),
+            Source::VtbAm => "VTB AM".into(),
             Source::Artsakh => "Artsakh".into(),
-            Source::Uni => "Uni".into(),
+            Source::UniBank => "UniBank".into(),
             Source::Amio => "Amio".into(),
             Source::Byblos => "Byblos".into(),
         };
@@ -328,9 +328,9 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
-    async fn test_vtb() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_vtb_am() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        let _: vtb::Response = vtb::Response::get_rates(&c).await?;
+        let _: vtb_am::Response = vtb_am::Response::get_rates(&c).await?;
         Ok(())
     }
 
@@ -342,9 +342,9 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
-    async fn test_uni() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_unibank() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        let _: lsoft::Response = uni::Response::get_rates(&c).await?;
+        let _: lsoft::Response = unibank::Response::get_rates(&c).await?;
         Ok(())
     }
 

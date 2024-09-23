@@ -1,8 +1,8 @@
 use crate::sources;
 use crate::sources::{
     acba, aeb, ameria, amio, ardshin, arm_swiss, armsoft, artsakh, byblos, cba, converse, evoca,
-    fast, ineco, lsoft, mellat, unibank, vtb_am, Currency, RateType, Source, SourceAphenaTrait,
-    SourceCashUrlTrait, SourceSingleUrlTrait,
+    fast, idbank, ineco, lsoft, mellat, unibank, vtb_am, Currency, RateType, Source,
+    SourceAphenaTrait, SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
 use std::collections::HashMap;
@@ -72,6 +72,7 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::UniBank => collect_unibank(&client).await?,
         Source::Amio => collect_amio(&client).await?,
         Source::Byblos => collect_byblos(&client).await?,
+        Source::IdBank => collect_idbank(&client).await?,
     };
     Ok(rates)
 }
@@ -102,8 +103,8 @@ async fn collect_acba(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-pub(crate) fn parse_acba(acba: acba::Response) -> Result<Vec<Rate>, Error> {
-    let result = acba.result.ok_or(Error::NoRates)?;
+pub(crate) fn parse_acba(resp: acba::Response) -> Result<Vec<Rate>, Error> {
+    let result = resp.result.ok_or(Error::NoRates)?;
     let rates = result
         .rates
         .non_cash
@@ -341,6 +342,23 @@ async fn collect_byblos(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
+async fn collect_idbank(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: idbank::Response = idbank::Response::get_rates(&client).await?;
+    let result = resp.result.ok_or(Error::NoRates)?;
+    let rates = result
+        .currency_rate
+        .iter()
+        .filter(|v| v.buy.is_some() && v.sell.is_some())
+        .map(|v| Rate {
+            currency: v.iso_txt.clone(),
+            rate_type: RateType::NoCash,
+            buy: v.buy.unwrap(),
+            sell: v.sell.unwrap(),
+        })
+        .collect();
+    Ok(rates)
+}
+
 mod tests {
     use super::*;
     use crate::sources::tests::build_client;
@@ -454,6 +472,13 @@ mod tests {
     async fn test_collect_byblos() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::Byblos).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_idbank() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::IdBank).await?;
         Ok(())
     }
 }

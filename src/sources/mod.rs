@@ -16,6 +16,7 @@ pub mod cba;
 pub mod converse;
 pub mod evoca;
 pub mod fast;
+pub mod idbank;
 pub mod ineco;
 pub mod lsoft;
 pub mod mellat;
@@ -69,6 +70,7 @@ pub enum Source {
     UniBank,
     Amio,
     Byblos,
+    IdBank,
 }
 
 impl Source {
@@ -90,6 +92,7 @@ impl Source {
             Self::UniBank,
             Self::Amio,
             Self::Byblos,
+            Self::IdBank,
         ]
         .iter()
         .copied()
@@ -122,6 +125,7 @@ impl Display for Source {
             Source::UniBank => "UniBank".into(),
             Source::Amio => "Amio".into(),
             Source::Byblos => "Byblos".into(),
+            Source::IdBank => "IdBank".into(),
         };
         write!(f, "{}", s)
     }
@@ -208,7 +212,7 @@ impl FromStr for RateType {
 #[derive(Debug)]
 pub enum Error {
     Reqwest(reqwest::Error),
-    De(quick_xml::DeError),
+    Xml(quick_xml::DeError),
     InvalidRateType,
 }
 
@@ -220,7 +224,7 @@ impl From<reqwest::Error> for Error {
 
 impl From<quick_xml::DeError> for Error {
     fn from(e: quick_xml::DeError) -> Self {
-        Self::De(e)
+        Self::Xml(e)
     }
 }
 
@@ -363,6 +367,13 @@ pub(crate) mod tests {
         let _: armsoft::Response = byblos::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
         let _: armsoft::Response = byblos::Response::get_rates(&c, RateType::Cash).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_idbank() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: idbank::Response = idbank::Response::get_rates(&c).await?;
         Ok(())
     }
 }

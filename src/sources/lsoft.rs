@@ -1,7 +1,7 @@
-use crate::sources::utils::de_currency;
+use crate::sources::utils::{de_currency, de_option_f64};
 use crate::sources::{Currency, Error};
 use serde::de::DeserializeOwned;
-use serde::{de, Deserialize, Deserializer};
+use serde::Deserialize;
 
 pub const APHENA: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <request client="mobile" device="android" handler="aphena" lang="2" operation="getCurrencyList">
@@ -75,15 +75,3 @@ pub struct Trf30 {}
 
 #[derive(Debug, Deserialize)]
 pub struct Trf31 {}
-
-fn de_option_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    if s.is_empty() {
-        return Ok(None);
-    }
-    let f = s.parse::<f64>().map_err(de::Error::custom)?;
-    Ok(Some(f))
-}

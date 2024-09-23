@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "am-rate-bot"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "argh",
  "env_logger",

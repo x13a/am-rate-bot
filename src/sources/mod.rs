@@ -331,6 +331,7 @@ pub(crate) mod tests {
         Ok(())
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_vtb_am() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;

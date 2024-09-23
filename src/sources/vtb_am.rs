@@ -43,7 +43,7 @@ pub struct RatesItem {
 pub struct BaseTarget {
     #[serde(deserialize_with = "de_currency")]
     pub currency: Currency,
-    pub discriminator: u16,
+    pub discriminator: u32,
 }
 
 #[derive(Debug, Deserialize)]

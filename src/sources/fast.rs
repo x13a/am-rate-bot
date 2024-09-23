@@ -10,7 +10,7 @@ pub const API_URL: &str =
 pub struct Response {
     #[serde(default)]
     pub rates: Option<Vec<Rate>>,
-    pub result_code: u16,
+    pub result_code: i32,
     pub result_message: String,
 }
 
@@ -34,6 +34,6 @@ pub struct Rate {
     pub prev_buy: f64,
     pub prev_sale: f64,
     pub sale: f64,
-    pub sort_id: u8,
+    pub sort_id: u64,
     pub unit: f32,
 }

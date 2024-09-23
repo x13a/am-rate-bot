@@ -8,7 +8,7 @@ pub const API_URL: &str = "https://www.acbadigital.am/api/en/v2/rates";
 #[serde(rename_all = "PascalCase")]
 pub struct Response {
     pub description: Option<String>,
-    pub result_code: u8,
+    pub result_code: i32,
     #[serde(default)]
     pub result: Option<Result>,
     pub result_code_description: String,

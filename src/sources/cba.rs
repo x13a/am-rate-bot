@@ -64,7 +64,7 @@ pub struct Rates {
 pub struct ExchangeRate {
     #[serde(rename = "ISO", deserialize_with = "de_currency")]
     pub iso: Currency,
-    pub amount: u16,
+    pub amount: u32,
     pub rate: f64,
     pub difference: f64,
 }

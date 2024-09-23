@@ -50,7 +50,7 @@ pub struct GetCurrencyList {
     #[serde(rename = "CurrencyList", default)]
     pub currency_list: Option<Vec<CurrencyList>>,
     #[serde(rename = "errorCode")]
-    pub error_code: u8,
+    pub error_code: i32,
 }
 
 #[derive(Debug, Deserialize)]

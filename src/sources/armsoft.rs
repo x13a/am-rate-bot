@@ -16,6 +16,6 @@ pub struct ExchangeRate {
     #[serde(deserialize_with = "de_currency")]
     pub currency: Currency,
     pub purchase: f64,
-    pub rate_for: u16,
+    pub rate_for: u32,
     pub sale: f64,
 }

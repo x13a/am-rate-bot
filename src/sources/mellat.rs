@@ -6,7 +6,7 @@ pub const API_URL: &str = "https://api.mellatbank.am/api/v1/rate/list";
 
 #[derive(Debug, Deserialize)]
 pub struct Response {
-    pub status: u16,
+    pub status: i32,
     pub message: Vec<String>,
     #[serde(default)]
     pub result: Option<Result>,
@@ -29,7 +29,7 @@ pub struct Data {
     pub updated_at: String,
     pub updated: String,
     pub created: String,
-    // __v: u8,
+    // __v: i32,
     #[serde(rename = "buyCash")]
     pub buy_cash: f64,
     #[serde(rename = "sellCash")]

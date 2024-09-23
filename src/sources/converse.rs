@@ -44,24 +44,24 @@ pub struct Currency {
     pub id: u64,
     #[serde(deserialize_with = "de_currency")]
     pub iso: SourceCurrency,
-    pub position: u32,
+    pub position: usize,
     pub sign: Option<String>,
     pub use_for_loand: u8,
     pub use_for_deposites: u8,
     pub use_for_rates: u8,
-    #[serde(deserialize_with = "de_u8")]
-    pub status: u8,
+    #[serde(deserialize_with = "de_i32")]
+    pub status: i32,
     pub created_at: String,
     pub updated_at: String,
 }
 
-fn de_u8<'de, D>(deserializer: D) -> Result<u8, D::Error>
+fn de_i32<'de, D>(deserializer: D) -> Result<i32, D::Error>
 where
     D: Deserializer<'de>,
 {
     let rv = match Value::deserialize(deserializer)? {
         Value::String(s) => s.parse().map_err(de::Error::custom)?,
-        Value::Number(n) => n.as_u64().ok_or(de::Error::custom(""))? as u8,
+        Value::Number(n) => n.as_i64().ok_or(de::Error::custom(""))? as i32,
         _ => return Err(de::Error::custom("")),
     };
     Ok(rv)

@@ -1,7 +1,7 @@
 use crate::sources;
 use crate::sources::{
     acba, aeb, ameria, amio, ardshin, arm_swiss, armsoft, artsakh, byblos, cba, converse, evoca,
-    fast, idbank, ineco, lsoft, mellat, unibank, vtb_am, Currency, RateType, Source,
+    fast, idbank, ineco, lsoft, mellat, moex, unibank, vtb_am, Currency, RateType, Source,
     SourceAphenaTrait, SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
@@ -73,6 +73,7 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::Amio => collect_amio(&client).await?,
         Source::Byblos => collect_byblos(&client).await?,
         Source::IdBank => collect_idbank(&client).await?,
+        Source::MOEX => collect_moex(&client).await?,
     };
     Ok(rates)
 }
@@ -359,6 +360,41 @@ async fn collect_idbank(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
+async fn collect_moex(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: moex::Response = moex::Response::get_rates(&client).await?;
+    let boardid = "CETS";
+    let facevalue = resp
+        .securities
+        .data
+        .iter()
+        .filter(|v| v.0 == boardid)
+        .map(|v| v.1)
+        .next()
+        .expect("panic");
+    let last = resp
+        .marketdata
+        .data
+        .iter()
+        .filter(|v| v.0 == boardid)
+        .filter_map(|v| v.1)
+        .next();
+    let Some(last) = last else {
+        return Err(Error::NoRates);
+    };
+    let mut rates = vec![];
+    if last == 0.0 {
+        return Ok(rates);
+    }
+    let rate = facevalue / last;
+    rates.push(Rate {
+        currency: Currency::rub(),
+        rate_type: RateType::NoCash,
+        buy: rate,
+        sell: rate,
+    });
+    Ok(rates)
+}
+
 mod tests {
     use super::*;
     use crate::sources::tests::build_client;
@@ -480,6 +516,13 @@ mod tests {
     async fn test_collect_idbank() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::IdBank).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_moex() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::MOEX).await?;
         Ok(())
     }
 }

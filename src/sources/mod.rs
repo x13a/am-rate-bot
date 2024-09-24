@@ -20,6 +20,7 @@ pub mod idbank;
 pub mod ineco;
 pub mod lsoft;
 pub mod mellat;
+pub mod moex;
 pub mod unibank;
 mod utils;
 pub mod vtb_am;
@@ -55,6 +56,7 @@ pub trait SourceCashUrlTrait {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Source {
     CBA,
+    MOEX,
     Acba,
     Ameria,
     Ardshin,
@@ -77,6 +79,7 @@ impl Source {
     pub fn iter() -> impl Iterator<Item = Source> {
         [
             Self::CBA,
+            Self::MOEX,
             Self::Acba,
             Self::Ameria,
             Self::Ardshin,
@@ -100,7 +103,7 @@ impl Source {
 
     pub fn prefix(&self) -> &str {
         match self {
-            Self::CBA => "#",
+            Self::CBA | Self::MOEX => "#",
             _ => "*",
         }
     }
@@ -110,6 +113,7 @@ impl Display for Source {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let s: String = match self {
             Source::CBA => "CBA".into(),
+            Source::MOEX => "MOEX'".into(),
             Source::Acba => "Acba".into(),
             Source::Ameria => "Ameria".into(),
             Source::Ardshin => "Ardshin".into(),
@@ -375,6 +379,13 @@ pub(crate) mod tests {
     async fn test_idbank() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         let _: idbank::Response = idbank::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_moex() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: moex::Response = moex::Response::get_rates(&c).await?;
         Ok(())
     }
 }

@@ -132,7 +132,7 @@ pub fn generate_table(
     table.sort_by(|a, b| sort(a.rate, b.rate));
     let best_rate = table
         .iter()
-        .filter(|r| r.source != Source::CBA)
+        .filter(|r| ![Source::CBA, Source::MOEX].contains(&r.source))
         .map(|r| r.rate)
         .next()
         .unwrap_or_default();

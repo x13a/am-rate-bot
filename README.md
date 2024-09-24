@@ -7,7 +7,7 @@ You can try it on [Telegram](https://t.me/am_rate_bot).
 ## Setup
 
 ```shell
-$ make fix-config
+make fix-config
 ```
 
 You have to set `TELOXIDE_TOKEN` env to your telegram bot token in `config/bot.env`.
@@ -15,7 +15,7 @@ You have to set `TELOXIDE_TOKEN` env to your telegram bot token in `config/bot.e
 ## Run
 
 ```shell
-$ docker compose up -d
+docker compose up -d
 ```
 
 ## License

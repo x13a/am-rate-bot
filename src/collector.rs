@@ -163,8 +163,10 @@ async fn collect_ardshin(client: &Client) -> Result<Vec<Rate>, Error> {
 
 async fn collect_arm_swiss(client: &Client) -> Result<Vec<Rate>, Error> {
     let resp: arm_swiss::Response = arm_swiss::Response::get_rates(&client).await?;
-    let rates = resp
-        .lmasbrate
+    let Some(lmasbrate) = resp.lmasbrate else {
+        return Err(Error::NoRates);
+    };
+    let rates = lmasbrate
         .iter()
         .map(|v| Rate {
             currency: v.iso.clone(),

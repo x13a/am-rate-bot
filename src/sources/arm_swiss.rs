@@ -4,21 +4,22 @@ use serde::Deserialize;
 
 pub const API_URL: &str = "https://www.armswissbank.am/include/ajax.php";
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
 pub struct Response {
-    pub lmasbrate: Vec<LmasbRate>,
-    pub imworldcuratesusd: Vec<ImWorldCuRatesUSD>,
-    pub imcuioil: Vec<ImCui>,
-    pub imcuigold: Vec<ImCui>,
-    pub imwmius: Vec<ImWmi>,
-    pub imwmiasiapac: Vec<ImWmi>,
-    pub imwmieurus: Vec<ImWmi>,
-    pub imlibor: Vec<ImlIbor>,
-    pub imeuribor: Vec<ImEurIbor>,
+    pub lmasbrate: Option<Vec<LmasbRate>>,
+    pub imworldcuratesusd: Option<Vec<ImWorldCuRatesUSD>>,
+    pub imcuioil: Option<Vec<ImCui>>,
+    pub imcuigold: Option<Vec<ImCui>>,
+    pub imwmius: Option<Vec<ImWmi>>,
+    pub imwmiasiapac: Option<Vec<ImWmi>>,
+    pub imwmieurus: Option<Vec<ImWmi>>,
+    pub imlibor: Option<Vec<ImlIbor>>,
+    pub imeuribor: Option<Vec<ImEurIbor>>,
     #[serde(rename = "lmgoldRate")]
-    pub lmgold_rate: Vec<LmGoldRate>,
-    pub imusakey: Vec<ImKey>,
-    pub imeukey: Vec<ImKey>,
+    pub lmgold_rate: Option<Vec<LmGoldRate>>,
+    pub imusakey: Option<Vec<ImKey>>,
+    pub imeukey: Option<Vec<ImKey>>,
 }
 
 impl SourceSingleUrlTrait for Response {

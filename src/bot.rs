@@ -3,6 +3,7 @@ use crate::generator::generate_table;
 use crate::sources::{Currency, Source};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::SystemTime;
 use teloxide::adaptors::DefaultParseMode;
 use teloxide::types::ParseMode;
 use teloxide::{prelude::*, utils::command::BotCommands, utils::html};
@@ -12,14 +13,23 @@ type Bot = DefaultParseMode<teloxide::Bot>;
 
 #[derive(Debug)]
 pub struct Storage {
-    pub map: Mutex<HashMap<Source, Vec<Rate>>>,
+    pub data: Mutex<Data>,
+}
+
+#[derive(Debug)]
+pub struct Data {
+    pub map: HashMap<Source, Vec<Rate>>,
+    pub updated_at: SystemTime,
 }
 
 impl Storage {
     #[must_use]
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
-            map: Mutex::new(HashMap::new()),
+            data: Mutex::new(Data {
+                map: HashMap::new(),
+                updated_at: SystemTime::now(),
+            }),
         })
     }
 }
@@ -100,8 +110,8 @@ async fn exchange_repl(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut rates = HashMap::new();
     {
-        let map = db.map.lock().await;
-        rates.clone_from(&map);
+        let data = db.data.lock().await;
+        rates.clone_from(&data.map);
     }
     for idx in 0..2 {
         let s = generate_table(to.clone(), from.clone(), &rates, idx % 2 == 0);

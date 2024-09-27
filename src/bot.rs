@@ -40,18 +40,18 @@ impl Storage {
     description = "These commands are supported:"
 )]
 enum Command {
-    #[command(description = "USD/AMD")]
+    #[command(description = "AMD/USD")]
     USD,
-    #[command(description = "EUR/AMD")]
+    #[command(description = "AMD/EUR")]
     EUR,
     #[command(description = "RUB/AMD")]
     RUB,
-    #[command(description = "USD/RUB")]
-    UsdRub,
-    #[command(description = "EUR/RUB")]
-    EurRub,
-    #[command(description = "EUR/USD")]
-    EurUsd,
+    #[command(description = "RUB/USD")]
+    RubUsd,
+    #[command(description = "RUB/EUR")]
+    RubEur,
+    #[command(description = "USD/EUR")]
+    UsdEur,
     #[command(description = "help")]
     Help,
     #[command(description = "welcome")]
@@ -91,12 +91,12 @@ async fn command(
         Command::Start => {
             bot.send_message(msg.chat.id, "You are welcome!").await?;
         }
-        Command::USD => exchange_repl(Currency::usd(), Currency::base(), bot, msg, db).await?,
-        Command::EUR => exchange_repl(Currency::eur(), Currency::base(), bot, msg, db).await?,
-        Command::RUB => exchange_repl(Currency::rub(), Currency::base(), bot, msg, db).await?,
-        Command::UsdRub => exchange_repl(Currency::usd(), Currency::rub(), bot, msg, db).await?,
-        Command::EurRub => exchange_repl(Currency::eur(), Currency::rub(), bot, msg, db).await?,
-        Command::EurUsd => exchange_repl(Currency::eur(), Currency::usd(), bot, msg, db).await?,
+        Command::USD => exchange_repl(Currency::base(), Currency::usd(), 0, bot, msg, db).await?,
+        Command::EUR => exchange_repl(Currency::base(), Currency::eur(), 0, bot, msg, db).await?,
+        Command::RUB => exchange_repl(Currency::rub(), Currency::base(), 1, bot, msg, db).await?,
+        Command::RubUsd => exchange_repl(Currency::rub(), Currency::usd(), 0, bot, msg, db).await?,
+        Command::RubEur => exchange_repl(Currency::rub(), Currency::eur(), 0, bot, msg, db).await?,
+        Command::UsdEur => exchange_repl(Currency::usd(), Currency::eur(), 0, bot, msg, db).await?,
     }
     Ok(())
 }
@@ -104,6 +104,7 @@ async fn command(
 async fn exchange_repl(
     mut from: Currency,
     mut to: Currency,
+    invert: i32,
     bot: Bot,
     msg: Message,
     db: Arc<Storage>,
@@ -114,7 +115,7 @@ async fn exchange_repl(
         rates.clone_from(&data.map);
     }
     for idx in 0..2 {
-        let s = generate_table(to.clone(), from.clone(), &rates, idx % 2 == 0);
+        let s = generate_table(from.clone(), to.clone(), &rates, idx % 2 == invert);
         bot.send_message(msg.chat.id, html::code_block(&s)).await?;
         std::mem::swap(&mut from, &mut to);
     }

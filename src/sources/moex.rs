@@ -1,7 +1,7 @@
 use crate::sources::SourceSingleUrlTrait;
 use serde::Deserialize;
 
-pub const API_URL: &str = "https://iss.moex.com/iss/engines/currency/markets/selt/securities/AMDRUB_TOM.json?iss.meta=off&marketdata.columns=BOARDID,LAST,VALTODAY_USD&securities.columns=BOARDID,FACEVALUE";
+pub const API_URL: &str = "https://iss.moex.com/iss/engines/currency/markets/selt/boards/CETS/securities/AMDRUB_TOM.json?iss.meta=off&marketdata.columns=BOARDID,LAST,VALTODAY_USD&securities.columns=BOARDID,FACEVALUE&iss.clear_cache=1&iss.json=compact";
 
 #[derive(Debug, Deserialize)]
 pub struct Response {

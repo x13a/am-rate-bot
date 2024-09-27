@@ -103,12 +103,10 @@ async fn exchange_repl(
         let map = db.map.lock().await;
         rates.clone_from(&map);
     }
-    let mut is_rev = false;
-    for _ in 0..2 {
-        let s = generate_table(from.clone(), to.clone(), &rates, is_rev);
+    for idx in 0..2 {
+        let s = generate_table(to.clone(), from.clone(), &rates, idx % 2 == 0);
         bot.send_message(msg.chat.id, html::code_block(&s)).await?;
         std::mem::swap(&mut from, &mut to);
-        is_rev = true;
     }
     Ok(())
 }

@@ -7,6 +7,7 @@ pub mod acba;
 pub mod aeb;
 pub mod ameria;
 pub mod amio;
+pub mod ararat;
 pub mod ardshin;
 pub mod arm_swiss;
 pub mod armsoft;
@@ -73,6 +74,7 @@ pub enum Source {
     Amio,
     Byblos,
     IdBank,
+    Ararat,
 }
 
 impl Source {
@@ -96,6 +98,7 @@ impl Source {
             Self::Amio,
             Self::Byblos,
             Self::IdBank,
+            Self::Ararat,
         ]
         .iter()
         .copied()
@@ -130,6 +133,7 @@ impl Display for Source {
             Source::Amio => "Amio".into(),
             Source::Byblos => "Byblos".into(),
             Source::IdBank => "IdBank".into(),
+            Source::Ararat => "Ararat".into(),
         };
         write!(f, "{}", s)
     }
@@ -386,6 +390,15 @@ pub(crate) mod tests {
     async fn test_moex() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         let _: moex::Response = moex::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ararat() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: armsoft::Response = ararat::Response::get_rates(&c, RateType::NoCash).await?;
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        let _: armsoft::Response = ararat::Response::get_rates(&c, RateType::Cash).await?;
         Ok(())
     }
 }

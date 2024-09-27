@@ -1,7 +1,7 @@
 use crate::sources;
 use crate::sources::{
-    acba, aeb, ameria, amio, ardshin, arm_swiss, armsoft, artsakh, byblos, cba, converse, evoca,
-    fast, idbank, ineco, lsoft, mellat, moex, unibank, vtb_am, Currency, RateType, Source,
+    acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, byblos, cba, converse,
+    evoca, fast, idbank, ineco, lsoft, mellat, moex, unibank, vtb_am, Currency, RateType, Source,
     SourceAphenaTrait, SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
@@ -74,6 +74,7 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::Byblos => collect_byblos(&client).await?,
         Source::IdBank => collect_idbank(&client).await?,
         Source::MOEX => collect_moex(&client).await?,
+        Source::Ararat => collect_ararat(&client).await?,
     };
     Ok(rates)
 }
@@ -397,6 +398,12 @@ async fn collect_moex(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
+async fn collect_ararat(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: armsoft::Response = ararat::Response::get_rates(&client, RateType::NoCash).await?;
+    let rates = collect_armsoft(resp);
+    Ok(rates)
+}
+
 mod tests {
     use super::*;
     use crate::sources::tests::build_client;
@@ -525,6 +532,13 @@ mod tests {
     async fn test_collect_moex() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::MOEX).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_ararat() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::Ararat).await?;
         Ok(())
     }
 }

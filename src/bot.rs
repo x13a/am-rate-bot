@@ -54,7 +54,7 @@ enum Command {
     UsdEur,
     #[command(description = "<FROM> <TO>", parse_with = "split")]
     FromTo { from: String, to: String },
-    #[command(description = "<FROM> <TO>", parse_with = "split")]
+    #[command(description = "<FROM> <TO> inverted", parse_with = "split")]
     FromToInv { from: String, to: String },
     #[command(description = "help")]
     Help,
@@ -93,7 +93,7 @@ async fn command(
                 .await?;
         }
         Command::Start => {
-            bot.send_message(msg.chat.id, "You are welcome!").await?;
+            bot.send_message(msg.chat.id, "Meow!").await?;
         }
         Command::USD => exchange_repl(Currency::base(), Currency::usd(), 0, bot, msg, db).await?,
         Command::EUR => exchange_repl(Currency::base(), Currency::eur(), 0, bot, msg, db).await?,

@@ -52,6 +52,10 @@ enum Command {
     RubEur,
     #[command(description = "USD/EUR")]
     UsdEur,
+    #[command(description = "<FROM> <TO>", parse_with = "split")]
+    FromTo { from: String, to: String },
+    #[command(description = "<FROM> <TO>", parse_with = "split")]
+    FromToInv { from: String, to: String },
     #[command(description = "help")]
     Help,
     #[command(description = "welcome")]
@@ -97,6 +101,12 @@ async fn command(
         Command::RubUsd => exchange_repl(Currency::rub(), Currency::usd(), 0, bot, msg, db).await?,
         Command::RubEur => exchange_repl(Currency::rub(), Currency::eur(), 0, bot, msg, db).await?,
         Command::UsdEur => exchange_repl(Currency::usd(), Currency::eur(), 0, bot, msg, db).await?,
+        Command::FromTo { from, to } => {
+            exchange_repl(Currency::new(&from), Currency::new(&to), 0, bot, msg, db).await?;
+        }
+        Command::FromToInv { from, to } => {
+            exchange_repl(Currency::new(&from), Currency::new(&to), 1, bot, msg, db).await?;
+        }
     }
     Ok(())
 }

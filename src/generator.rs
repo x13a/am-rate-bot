@@ -111,9 +111,13 @@ pub fn generate_table(
             paths.iter_mut().for_each(|v| v.1 = 1.0 / v.1);
         }
         paths.sort_by(|a, b| sort(a.1, b.1));
-        let idx = paths.iter().position(|v| v.0.len() == 2);
-        if let Some(idx) = idx {
-            paths.drain(idx + 1..);
+        let max_len = paths.iter().map(|v| v.0.len()).max().unwrap_or(3);
+        for i in 2..max_len + 1 {
+            let pos = paths.iter().position(|v| v.0.len() == i);
+            if let Some(pos) = pos {
+                paths.drain(pos + 1..);
+                break;
+            }
         }
         source_width = source_width.max(source.to_string().len());
         for (path, rate) in paths.iter().filter(|v| v.1 > 0.0) {

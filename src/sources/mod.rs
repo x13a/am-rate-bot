@@ -147,18 +147,9 @@ impl Currency {
     pub const USD: &'static str = "USD";
     pub const EUR: &'static str = "EUR";
     pub const RUB: &'static str = "RUB";
+
     pub fn new(s: &str) -> Self {
         Self(s.trim().to_uppercase().replace("RUR", Self::RUB))
-    }
-
-    pub fn cross_to_currencies(&self) -> Option<(Self, Self)> {
-        self.0
-            .split_once('/')
-            .map(|(a, b)| (Self::new(a), Self::new(b)))
-    }
-
-    pub fn base() -> Self {
-        Self(Self::AMD.into())
     }
 
     pub fn usd() -> Self {
@@ -188,15 +179,19 @@ impl FromStr for Currency {
     }
 }
 
+impl Default for Currency {
+    fn default() -> Self {
+        Self(Self::AMD.into())
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RateType {
     NoCash = 0,
     Cash = 1,
     Card = 2,
     Online = 3,
-    Cross = 4,
-    CB = 5,
-    Metal = 6,
+    CB = 4,
 }
 
 impl FromStr for RateType {
@@ -208,9 +203,7 @@ impl FromStr for RateType {
             "CASH" => Self::Cash,
             "CARD" => Self::Card,
             "ONLINE" => Self::Online,
-            "CROSS" => Self::Cross,
             "CB" => Self::CB,
-            "METAL" => Self::Metal,
             _ => return Err(Error::InvalidRateType),
         };
         Ok(rt)
@@ -244,14 +237,15 @@ impl Display for Error {
 
 impl std::error::Error for Error {}
 
-pub(crate) mod tests {
+#[cfg(test)]
+mod tests {
     use super::*;
     use reqwest::Client;
     use std::time::Duration;
 
     const TIMEOUT: u64 = 10;
 
-    pub(crate) fn build_client() -> reqwest::Result<Client> {
+    fn build_client() -> reqwest::Result<Client> {
         reqwest::ClientBuilder::new()
             .timeout(Duration::from_secs(TIMEOUT))
             .build()

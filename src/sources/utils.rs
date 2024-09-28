@@ -19,7 +19,7 @@ where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    Ok(Currency::from_str(&s).expect("currency not supported"))
+    Ok(Currency::new(&s))
 }
 
 pub(crate) fn de_rate_type<'de, D>(deserializer: D) -> Result<RateType, D::Error>

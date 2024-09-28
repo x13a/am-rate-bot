@@ -1,5 +1,5 @@
-use crate::sources::utils::{de_currency, de_rate_type};
-use crate::sources::{Currency as SourceCurrency, RateType, SourceSingleUrlTrait};
+use crate::sources::utils::de_currency;
+use crate::sources::{Currency as SourceCurrency, SourceSingleUrlTrait};
 use serde::{de, Deserialize, Deserializer};
 use serde_json::Value;
 
@@ -30,8 +30,8 @@ pub struct Item {
     pub sell: f64,
     pub sell_diff: f64,
     pub rate_date: String,
-    #[serde(rename = "type", deserialize_with = "de_rate_type")]
-    pub rate_type: RateType,
+    #[serde(rename = "type")]
+    pub rate_type: String,
     #[serde(deserialize_with = "de_currency")]
     pub iso2: SourceCurrency,
     pub created_at: String,

@@ -95,9 +95,15 @@ async fn command(
         Command::Start => {
             bot.send_message(msg.chat.id, "Meow!").await?;
         }
-        Command::USD => exchange_repl(Currency::base(), Currency::usd(), 0, bot, msg, db).await?,
-        Command::EUR => exchange_repl(Currency::base(), Currency::eur(), 0, bot, msg, db).await?,
-        Command::RUB => exchange_repl(Currency::rub(), Currency::base(), 1, bot, msg, db).await?,
+        Command::USD => {
+            exchange_repl(Currency::default(), Currency::usd(), 0, bot, msg, db).await?
+        }
+        Command::EUR => {
+            exchange_repl(Currency::default(), Currency::eur(), 0, bot, msg, db).await?
+        }
+        Command::RUB => {
+            exchange_repl(Currency::rub(), Currency::default(), 1, bot, msg, db).await?
+        }
         Command::RubUsd => exchange_repl(Currency::rub(), Currency::usd(), 0, bot, msg, db).await?,
         Command::RubEur => exchange_repl(Currency::rub(), Currency::eur(), 0, bot, msg, db).await?,
         Command::UsdEur => exchange_repl(Currency::usd(), Currency::eur(), 0, bot, msg, db).await?,

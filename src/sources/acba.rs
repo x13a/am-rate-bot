@@ -55,8 +55,7 @@ pub struct CrossRate {
     pub buy: f64,
     #[serde(deserialize_with = "de_f64")]
     pub sell: f64,
-    #[serde(deserialize_with = "de_currency")]
-    pub currency: SourcesCurrency,
+    pub currency: String,
 }
 
 #[derive(Debug, Deserialize)]

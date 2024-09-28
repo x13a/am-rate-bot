@@ -16,19 +16,18 @@ fn build_graph(rates: &[Rate]) -> HashMap<Currency, Vec<Edge>> {
     };
     for rate in rates
         .iter()
-        .filter(|r| [RateType::NoCash, RateType::CB, RateType::Cross].contains(&r.rate_type))
-        .filter(|r| r.buy > 0.0 && r.sell > 0.0)
+        .filter(|r| [RateType::NoCash, RateType::CB].contains(&r.rate_type) && r.from != r.to)
     {
-        let (from, to) = if rate.rate_type == RateType::Cross {
-            match rate.currency.cross_to_currencies() {
-                Some((from, to)) => (from, to),
-                _ => continue,
+        if let Some(buy) = rate.buy {
+            if buy > 0.0 {
+                add_edge(rate.from.clone(), rate.to.clone(), buy);
             }
-        } else {
-            (rate.currency.clone(), Currency::base())
-        };
-        add_edge(from.clone(), to.clone(), rate.buy);
-        add_edge(to, from, 1.0 / rate.sell);
+        }
+        if let Some(sell) = rate.sell {
+            if sell > 0.0 {
+                add_edge(rate.to.clone(), rate.from.clone(), 1.0 / sell);
+            }
+        }
     }
     graph
 }
@@ -87,7 +86,10 @@ pub fn generate_table(
     rates: &HashMap<Source, Vec<Rate>>,
     is_rev: bool,
 ) -> String {
-    assert_ne!(from, to);
+    if from == to {
+        return r"¯\_(ツ)_/¯".into();
+    }
+
     struct Row {
         source: Source,
         rate: f64,
@@ -96,6 +98,7 @@ pub fn generate_table(
         diff_str: String,
         path: Vec<Currency>,
     }
+
     let mut table = vec![];
     let mut source_width: usize = 0;
     let mut rate_width: usize = 0;
@@ -183,11 +186,21 @@ pub fn generate_table(
     s
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::collector::{collect_all, filter_collection, parse_acba};
     use crate::sources::acba;
-    use crate::sources::tests::build_client;
+    use reqwest::Client;
+    use std::time::Duration;
+
+    const TIMEOUT: u64 = 10;
+
+    fn build_client() -> reqwest::Result<Client> {
+        reqwest::ClientBuilder::new()
+            .timeout(Duration::from_secs(TIMEOUT))
+            .build()
+    }
 
     const ACBA_DATA: &str = r#"{
       "Description": null,
@@ -386,8 +399,8 @@ mod tests {
             (Currency::usd(), Currency::rub()),
             (Currency::eur(), Currency::rub()),
             (Currency::eur(), Currency::usd()),
-            (Currency::usd(), Currency::base()),
-            (Currency::rub(), Currency::base()),
+            (Currency::usd(), Currency::default()),
+            (Currency::rub(), Currency::default()),
         ]
     }
 
@@ -395,9 +408,9 @@ mod tests {
     fn test_graph() -> Result<(), Box<dyn std::error::Error>> {
         let acba: acba::Response = serde_json::from_str(ACBA_DATA)?;
         let rates = parse_acba(acba)?;
+        let graph = build_graph(&rates);
         let test_cases = get_test_cases();
         for (from, to) in test_cases {
-            let graph = build_graph(&rates);
             let mut paths = find_all_paths(&graph, from.clone(), to.clone());
             paths.sort_by(|a, b| b.1.partial_cmp(&a.1).expect("panic"));
         }

@@ -32,7 +32,8 @@ pub struct Rates {
 #[derive(Debug, Deserialize)]
 pub struct RatesItem {
     pub base: BaseTarget,
-    pub buy: BuySell,
+    #[serde(default)]
+    pub buy: Option<BuySell>,
     #[serde(default)]
     pub sell: Option<BuySell>,
     pub target: BaseTarget,

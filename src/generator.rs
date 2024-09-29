@@ -1,5 +1,6 @@
 use crate::collector::Rate;
 use crate::sources::{Currency, RateType, Source};
+use crate::DUNNO;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
@@ -87,7 +88,7 @@ pub fn generate_table(
     is_rev: bool,
 ) -> String {
     if from == to {
-        return r"¯\_(ツ)_/¯".into();
+        return DUNNO.into();
     }
 
     struct Row {
@@ -183,7 +184,11 @@ pub fn generate_table(
         )
         .expect("panic");
     }
-    s
+    if s.is_empty() {
+        DUNNO.into()
+    } else {
+        s
+    }
 }
 
 #[cfg(test)]

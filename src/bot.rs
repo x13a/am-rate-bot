@@ -1,6 +1,7 @@
 use crate::collector::Rate;
 use crate::generator::generate_table;
 use crate::sources::{Currency, Source};
+use crate::DUNNO;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -89,7 +90,7 @@ async fn command(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     match cmd {
         Command::Help => {
-            bot.send_message(msg.chat.id, Command::descriptions().to_string())
+            bot.send_message(msg.chat.id, html::escape(&Command::descriptions().to_string()))
                 .await?;
         }
         Command::Start => {
@@ -125,6 +126,10 @@ async fn exchange_repl(
     msg: Message,
     db: Arc<Storage>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    if to == from {
+        bot.send_message(msg.chat.id, DUNNO).await?;
+        return Ok(());
+    }
     let mut rates = HashMap::new();
     {
         let data = db.data.lock().await;

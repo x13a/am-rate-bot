@@ -13,7 +13,7 @@ pub mod arm_swiss;
 pub mod armsoft;
 pub mod artsakh;
 pub mod byblos;
-pub mod cba;
+pub mod cb_am;
 pub mod converse;
 pub mod evoca;
 pub mod fast;
@@ -56,7 +56,7 @@ pub trait SourceCashUrlTrait {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Source {
-    CBA,
+    CbAm,
     MOEX,
     Acba,
     Ameria,
@@ -75,12 +75,13 @@ pub enum Source {
     Byblos,
     IdBank,
     Ararat,
+    IdPay,
 }
 
 impl Source {
     pub fn iter() -> impl Iterator<Item = Source> {
         [
-            Self::CBA,
+            Self::CbAm,
             Self::MOEX,
             Self::Acba,
             Self::Ameria,
@@ -99,23 +100,29 @@ impl Source {
             Self::Byblos,
             Self::IdBank,
             Self::Ararat,
+            Self::IdPay,
         ]
         .iter()
         .copied()
     }
 
     pub fn prefix(&self) -> &str {
-        match self {
-            Self::CBA | Self::MOEX => "#",
-            _ => "*",
+        if Self::get_not_banks().contains(self) {
+            "#"
+        } else {
+            "*"
         }
+    }
+
+    pub fn get_not_banks() -> Vec<Self> {
+        [Self::CbAm, Self::MOEX, Self::IdPay].into()
     }
 }
 
 impl Display for Source {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let s: String = match self {
-            Source::CBA => "CBA".into(),
+            Source::CbAm => "CB AM".into(),
             Source::MOEX => "MOEX'".into(),
             Source::Acba => "Acba".into(),
             Source::Ameria => "Ameria".into(),
@@ -134,6 +141,7 @@ impl Display for Source {
             Source::Byblos => "Byblos".into(),
             Source::IdBank => "IdBank".into(),
             Source::Ararat => "Ararat".into(),
+            Source::IdPay => "IdPay'".into(),
         };
         write!(f, "{}", s)
     }
@@ -313,9 +321,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_cba() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_cb_am() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        let _: cba::Response = cba::Response::get_rates(&c).await?;
+        let _: cb_am::Response = cb_am::Response::get_rates(&c).await?;
         Ok(())
     }
 
@@ -393,6 +401,14 @@ mod tests {
         let _: armsoft::Response = ararat::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
         let _: armsoft::Response = ararat::Response::get_rates(&c, RateType::Cash).await?;
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_idpay() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: idbank::Response = idbank::Response::get_rates(&c).await?;
         Ok(())
     }
 }

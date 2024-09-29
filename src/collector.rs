@@ -1,6 +1,6 @@
 use crate::sources;
 use crate::sources::{
-    acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, byblos, cba, converse,
+    acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, byblos, cb_am, converse,
     evoca, fast, idbank, ineco, lsoft, mellat, moex, unibank, vtb_am, Currency, RateType, Source,
     SourceAphenaTrait, SourceCashUrlTrait, SourceSingleUrlTrait,
 };
@@ -61,7 +61,7 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::Ameria => collect_ameria(&client).await?,
         Source::Ardshin => collect_ardshin(&client).await?,
         Source::ArmSwiss => collect_arm_swiss(&client).await?,
-        Source::CBA => collect_cba(&client).await?,
+        Source::CbAm => collect_cb_am(&client).await?,
         Source::Evoca => collect_evoca(&client).await?,
         Source::Fast => collect_fast(&client).await?,
         Source::Ineco => collect_ineco(&client).await?,
@@ -76,6 +76,7 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::IdBank => collect_idbank(&client).await?,
         Source::MOEX => collect_moex(&client).await?,
         Source::Ararat => collect_ararat(&client).await?,
+        Source::IdPay => collect_idpay(&client).await?,
     };
     Ok(rates)
 }
@@ -191,8 +192,8 @@ async fn collect_arm_swiss(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_cba(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp = cba::Response::get_rates(&client).await?;
+async fn collect_cb_am(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp = cb_am::Response::get_rates(&client).await?;
     let rates = resp
         .soap_body
         .exchange_rates_latest_response
@@ -384,12 +385,12 @@ async fn collect_idbank(client: &Client) -> Result<Vec<Rate>, Error> {
 
 async fn collect_moex(client: &Client) -> Result<Vec<Rate>, Error> {
     let resp: moex::Response = moex::Response::get_rates(&client).await?;
-    let boardid = "CETS";
+    const BOARD_ID: &str = "CETS";
     let facevalue = resp
         .securities
         .data
         .iter()
-        .filter(|v| v.0 == boardid)
+        .filter(|v| v.0 == BOARD_ID)
         .map(|v| v.1)
         .next()
         .unwrap_or(100.0);
@@ -397,7 +398,7 @@ async fn collect_moex(client: &Client) -> Result<Vec<Rate>, Error> {
         .marketdata
         .data
         .iter()
-        .filter(|v| v.0 == boardid)
+        .filter(|v| v.0 == BOARD_ID)
         .filter_map(|v| v.1)
         .next();
     let Some(last) = last else {
@@ -421,6 +422,28 @@ async fn collect_moex(client: &Client) -> Result<Vec<Rate>, Error> {
 async fn collect_ararat(client: &Client) -> Result<Vec<Rate>, Error> {
     let resp: armsoft::Response = ararat::Response::get_rates(&client, RateType::NoCash).await?;
     let rates = collect_armsoft(resp);
+    Ok(rates)
+}
+
+async fn collect_idpay(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: idbank::Response = idbank::Response::get_rates(&client).await?;
+    let result = resp.result.ok_or(Error::NoRates)?;
+    const COMMISSION_RATE: f64 = 0.9;
+    let rates = result
+        .currency_rate
+        .iter()
+        .filter(|v| v.buy.is_some() && v.sell.is_some() && v.iso_txt == Currency::rub())
+        .map(|v| {
+            let buy = v.buy.unwrap();
+            Rate {
+                from: v.iso_txt.clone(),
+                to: Currency::default(),
+                rate_type: RateType::NoCash,
+                buy: Some(buy - (COMMISSION_RATE / 100.0 * buy)),
+                sell: None,
+            }
+        })
+        .collect();
     Ok(rates)
 }
 
@@ -466,9 +489,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_collect_cba() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_cb_am() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        collect(&c, Source::CBA).await?;
+        collect(&c, Source::CbAm).await?;
         Ok(())
     }
 
@@ -568,6 +591,13 @@ mod tests {
     async fn test_collect_ararat() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::Ararat).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_idpay() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::IdPay).await?;
         Ok(())
     }
 }

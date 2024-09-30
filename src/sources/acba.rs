@@ -42,8 +42,8 @@ pub struct Rate {
     pub buy: f64,
     #[serde(deserialize_with = "de_f64")]
     pub sell: f64,
-    #[serde(deserialize_with = "de_f64", rename = "CB")]
-    pub cb: f64,
+    #[serde(rename = "CB")]
+    pub cb: String,
     #[serde(deserialize_with = "de_currency")]
     pub currency: SourcesCurrency,
 }

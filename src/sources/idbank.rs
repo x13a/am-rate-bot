@@ -1,8 +1,8 @@
-use crate::sources::utils::{de_currency, de_f64, de_option_f64};
+use crate::sources::utils::{de_currency, de_option_f64};
 use crate::sources::{Currency, Error, SourceSingleUrlTrait};
 use reqwest::Client;
 use serde::de::DeserializeOwned;
-use serde::{de, Deserialize, Deserializer};
+use serde::Deserialize;
 
 pub const API_URL: &str = "https://www.idbanking.am/api/MyInfo/getCurrencyRateMobile";
 
@@ -31,8 +31,7 @@ pub struct CurrencyRate {
     pub cards_buy: Option<f64>,
     #[serde(deserialize_with = "de_option_f64")]
     pub cards_sell: Option<f64>,
-    #[serde(deserialize_with = "de_f64")]
-    pub cb: f64,
+    pub cb: String,
     pub country: String,
     #[serde(deserialize_with = "de_option_f64")]
     pub csh_buy: Option<f64>,
@@ -44,12 +43,10 @@ pub struct CurrencyRate {
     pub csh_sell_trf: Option<f64>,
     #[serde(deserialize_with = "de_currency")]
     pub external_id: Currency,
-    #[serde(deserialize_with = "de_u32")]
-    pub iso_code: u32,
+    pub iso_code: String,
     #[serde(deserialize_with = "de_currency")]
     pub iso_txt: Currency,
-    #[serde(deserialize_with = "de_f64")]
-    pub loan: f64,
+    pub loan: String,
     pub name: Name,
     #[serde(deserialize_with = "de_option_f64")]
     pub sell: Option<f64>,
@@ -85,13 +82,4 @@ impl SourceSingleUrlTrait for Response {
             .await?;
         Ok(resp)
     }
-}
-
-fn de_u32<'de, D>(deserializer: D) -> std::result::Result<u32, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    let u = s.parse::<u32>().map_err(de::Error::custom)?;
-    Ok(u)
 }

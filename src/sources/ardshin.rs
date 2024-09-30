@@ -43,13 +43,11 @@ pub struct Currency {
     pub buy: f64,
     #[serde(deserialize_with = "de_f64")]
     pub sell: f64,
-    #[serde(deserialize_with = "de_f64")]
-    pub cb: f64,
+    pub cb: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct GoldCash {
     pub quantity: String,
-    #[serde(deserialize_with = "de_f64")]
-    pub rate: f64,
+    pub rate: String,
 }

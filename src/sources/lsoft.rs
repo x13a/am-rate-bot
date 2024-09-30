@@ -71,7 +71,7 @@ pub struct CurrencyList {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Trf30 {}
+pub struct Trf30;
 
 #[derive(Debug, Deserialize)]
-pub struct Trf31 {}
+pub struct Trf31;

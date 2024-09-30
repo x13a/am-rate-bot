@@ -48,12 +48,12 @@ pub struct LmasbRate {
 
 #[derive(Debug, Deserialize)]
 pub struct ImWorldCuRatesUSD {
-    #[serde(rename = "ISO", deserialize_with = "de_currency")]
-    pub iso: Currency,
+    #[serde(rename = "ISO")]
+    pub iso: String,
     #[serde(rename = "CURRENCY")]
     pub currency: String,
-    #[serde(rename = "BIDRATE", deserialize_with = "de_f64")]
-    pub bidrate: f64,
+    #[serde(rename = "BIDRATE")]
+    pub bidrate: String,
     #[serde(rename = "Change")]
     pub change: String,
     pub inserttime: String,
@@ -63,12 +63,12 @@ pub struct ImWorldCuRatesUSD {
 #[derive(Debug, Deserialize)]
 pub struct ImCui {
     pub index: String,
-    #[serde(rename = "Price", deserialize_with = "de_f64")]
-    pub price: f64,
-    #[serde(rename = "NetChange", deserialize_with = "de_f64")]
-    pub net_change: f64,
-    #[serde(rename = "PctChange", deserialize_with = "de_f64")]
-    pub pct_change: f64,
+    #[serde(rename = "Price")]
+    pub price: String,
+    #[serde(rename = "NetChange")]
+    pub net_change: String,
+    #[serde(rename = "PctChange")]
+    pub pct_change: String,
     pub inserttime: String,
     pub hert: String,
 }
@@ -76,12 +76,12 @@ pub struct ImCui {
 #[derive(Debug, Deserialize)]
 pub struct ImWmi {
     pub index: String,
-    #[serde(rename = "VALUE", deserialize_with = "de_f64")]
-    pub value: f64,
-    #[serde(rename = "NetChange", deserialize_with = "de_f64")]
-    pub net_change: f64,
-    #[serde(rename = "PctChange", deserialize_with = "de_f64")]
-    pub pct_change: f64,
+    #[serde(rename = "VALUE")]
+    pub value: String,
+    #[serde(rename = "NetChange")]
+    pub net_change: String,
+    #[serde(rename = "PctChange")]
+    pub pct_change: String,
     pub inserttime: String,
     pub hert: String,
 }
@@ -90,14 +90,14 @@ pub struct ImWmi {
 pub struct ImlIbor {
     #[serde(rename = "LIBOR")]
     pub libor: String,
-    #[serde(rename = "USD", deserialize_with = "de_f64")]
-    pub usd: f64,
-    #[serde(rename = "Change1", deserialize_with = "de_f64")]
-    pub change1: f64,
-    #[serde(rename = "EUR", deserialize_with = "de_f64")]
-    pub eur: f64,
-    #[serde(rename = "Change2", deserialize_with = "de_f64")]
-    pub change2: f64,
+    #[serde(rename = "USD")]
+    pub usd: String,
+    #[serde(rename = "Change1")]
+    pub change1: String,
+    #[serde(rename = "EUR")]
+    pub eur: String,
+    #[serde(rename = "Change2")]
+    pub change2: String,
     pub inserttime: String,
     pub hert: String,
 }
@@ -106,10 +106,10 @@ pub struct ImlIbor {
 pub struct ImEurIbor {
     #[serde(rename = "EURIBOR")]
     pub euribor: String,
-    #[serde(rename = "EUR", deserialize_with = "de_f64")]
-    pub eur: f64,
-    #[serde(rename = "Change", deserialize_with = "de_f64")]
-    pub change: f64,
+    #[serde(rename = "EUR")]
+    pub eur: String,
+    #[serde(rename = "Change")]
+    pub change: String,
     pub inserttime: String,
     pub hert: String,
 }
@@ -117,10 +117,8 @@ pub struct ImEurIbor {
 #[derive(Debug, Deserialize)]
 pub struct LmGoldRate {
     pub name: String,
-    #[serde(deserialize_with = "de_f64")]
-    pub weight: f64,
-    #[serde(deserialize_with = "de_f64")]
-    pub offer: f64,
+    pub weight: String,
+    pub offer: String,
     pub hert: String,
     pub inserttime: String,
 }

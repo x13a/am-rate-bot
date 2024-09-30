@@ -27,10 +27,8 @@ pub struct Result {
 pub struct CurrencyRate {
     #[serde(deserialize_with = "de_option_f64")]
     pub buy: Option<f64>,
-    #[serde(deserialize_with = "de_option_f64")]
-    pub cards_buy: Option<f64>,
-    #[serde(deserialize_with = "de_option_f64")]
-    pub cards_sell: Option<f64>,
+    pub cards_buy: String,
+    pub cards_sell: String,
     pub cb: String,
     pub country: String,
     #[serde(deserialize_with = "de_option_f64")]
@@ -41,8 +39,7 @@ pub struct CurrencyRate {
     pub csh_sell: Option<f64>,
     #[serde(deserialize_with = "de_option_f64")]
     pub csh_sell_trf: Option<f64>,
-    #[serde(deserialize_with = "de_currency")]
-    pub external_id: Currency,
+    pub external_id: String,
     pub iso_code: String,
     #[serde(deserialize_with = "de_currency")]
     pub iso_txt: Currency,

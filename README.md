@@ -4,6 +4,8 @@ Armenia currency exchange rates telegram bot.
 
 You can try it on [Telegram](https://t.me/am_rate_bot).
 
+<img width="470" alt="am-rate-bot" src="https://github.com/user-attachments/assets/e8090cc2-a62a-48ea-bc27-b2e06c895219">
+
 ## Setup
 
 ```shell

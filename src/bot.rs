@@ -1,6 +1,6 @@
 use crate::collector::Rate;
 use crate::generator::generate_table;
-use crate::sources::{Currency, Source};
+use crate::sources::{Currency, RateType, Source};
 use crate::DUNNO;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -57,6 +57,22 @@ enum Command {
     FromTo { from: String, to: String },
     #[command(description = "<FROM> <TO> inverted", parse_with = "split")]
     FromToInv { from: String, to: String },
+    #[command(description = "AMD/USD cash")]
+    UsdCash,
+    #[command(description = "AMD/EUR cash")]
+    EurCash,
+    #[command(description = "RUB/AMD cash")]
+    RubCash,
+    #[command(description = "RUB/USD cash")]
+    RubUsdCash,
+    #[command(description = "RUB/EUR cash")]
+    RubEurCash,
+    #[command(description = "USD/EUR cash")]
+    UsdEurCash,
+    #[command(description = "<FROM> <TO> cash", parse_with = "split")]
+    FromToCash { from: String, to: String },
+    #[command(description = "<FROM> <TO> cash inverted", parse_with = "split")]
+    FromToCashInv { from: String, to: String },
     #[command(description = "help")]
     Help,
     #[command(description = "welcome")]
@@ -90,29 +106,125 @@ async fn command(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     match cmd {
         Command::Help => {
-            bot.send_message(msg.chat.id, html::escape(&Command::descriptions().to_string()))
-                .await?;
+            bot.send_message(
+                msg.chat.id,
+                html::escape(&Command::descriptions().to_string()),
+            )
+            .await?;
         }
         Command::Start => {
             bot.send_message(msg.chat.id, "Meow!").await?;
         }
-        Command::USD => {
-            exchange_repl(Currency::default(), Currency::usd(), 0, bot, msg, db).await?
+        Command::USD | Command::UsdCash => {
+            exchange_repl(
+                Currency::default(),
+                Currency::usd(),
+                match cmd {
+                    Command::UsdCash => RateType::Cash,
+                    _ => RateType::NoCash,
+                },
+                0,
+                bot,
+                msg,
+                db,
+            )
+            .await?
         }
-        Command::EUR => {
-            exchange_repl(Currency::default(), Currency::eur(), 0, bot, msg, db).await?
+        Command::EUR | Command::EurCash => {
+            exchange_repl(
+                Currency::default(),
+                Currency::eur(),
+                match cmd {
+                    Command::EurCash => RateType::Cash,
+                    _ => RateType::NoCash,
+                },
+                0,
+                bot,
+                msg,
+                db,
+            )
+            .await?
         }
-        Command::RUB => {
-            exchange_repl(Currency::rub(), Currency::default(), 1, bot, msg, db).await?
+        Command::RUB | Command::RubCash => {
+            exchange_repl(
+                Currency::rub(),
+                Currency::default(),
+                match cmd {
+                    Command::RubCash => RateType::Cash,
+                    _ => RateType::NoCash,
+                },
+                1,
+                bot,
+                msg,
+                db,
+            )
+            .await?
         }
-        Command::RubUsd => exchange_repl(Currency::rub(), Currency::usd(), 0, bot, msg, db).await?,
-        Command::RubEur => exchange_repl(Currency::rub(), Currency::eur(), 0, bot, msg, db).await?,
-        Command::UsdEur => exchange_repl(Currency::usd(), Currency::eur(), 0, bot, msg, db).await?,
-        Command::FromTo { from, to } => {
-            exchange_repl(Currency::new(&from), Currency::new(&to), 0, bot, msg, db).await?;
+        Command::RubUsd | Command::RubUsdCash => {
+            exchange_repl(
+                Currency::rub(),
+                Currency::usd(),
+                match cmd {
+                    Command::RubUsdCash => RateType::Cash,
+                    _ => RateType::NoCash,
+                },
+                0,
+                bot,
+                msg,
+                db,
+            )
+            .await?
         }
-        Command::FromToInv { from, to } => {
-            exchange_repl(Currency::new(&from), Currency::new(&to), 1, bot, msg, db).await?;
+        Command::RubEur | Command::RubEurCash => {
+            exchange_repl(
+                Currency::rub(),
+                Currency::eur(),
+                match cmd {
+                    Command::RubEurCash => RateType::Cash,
+                    _ => RateType::NoCash,
+                },
+                0,
+                bot,
+                msg,
+                db,
+            )
+            .await?
+        }
+        Command::UsdEur | Command::UsdEurCash => {
+            exchange_repl(
+                Currency::usd(),
+                Currency::eur(),
+                match cmd {
+                    Command::UsdEurCash => RateType::Cash,
+                    _ => RateType::NoCash,
+                },
+                0,
+                bot,
+                msg,
+                db,
+            )
+            .await?
+        }
+        Command::FromTo { ref from, ref to }
+        | Command::FromToInv { ref from, ref to }
+        | Command::FromToCash { ref from, ref to }
+        | Command::FromToCashInv { ref from, ref to } => {
+            exchange_repl(
+                Currency::new(from),
+                Currency::new(to),
+                match cmd {
+                    Command::FromToCash { .. } | Command::FromToCashInv { .. } => RateType::Cash,
+                    _ => RateType::NoCash,
+                },
+                match cmd {
+                    Command::FromToInv { .. } | Command::FromToCashInv { .. } => 1,
+                    _ => 0,
+                },
+                bot,
+                msg,
+                db,
+            )
+            .await?;
         }
     }
     Ok(())
@@ -121,7 +233,8 @@ async fn command(
 async fn exchange_repl(
     mut from: Currency,
     mut to: Currency,
-    invert: i32,
+    rate_type: RateType,
+    inv: i32,
     bot: Bot,
     msg: Message,
     db: Arc<Storage>,
@@ -136,7 +249,7 @@ async fn exchange_repl(
         rates.clone_from(&data.map);
     }
     for idx in 0..2 {
-        let s = generate_table(from.clone(), to.clone(), &rates, idx % 2 == invert);
+        let s = generate_table(from.clone(), to.clone(), &rates, rate_type, idx % 2 == inv);
         bot.send_message(msg.chat.id, html::code_block(&s)).await?;
         std::mem::swap(&mut from, &mut to);
     }

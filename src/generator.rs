@@ -10,14 +10,14 @@ struct Edge {
     rate: f64,
 }
 
-fn build_graph(rates: &[Rate]) -> HashMap<Currency, Vec<Edge>> {
+fn build_graph(rates: &[Rate], rate_type: RateType) -> HashMap<Currency, Vec<Edge>> {
     let mut graph: HashMap<Currency, Vec<Edge>> = HashMap::new();
     let mut add_edge = |from: Currency, to: Currency, rate: f64| {
         graph.entry(from).or_default().push(Edge { to, rate });
     };
     for rate in rates
         .iter()
-        .filter(|r| [RateType::NoCash, RateType::CB].contains(&r.rate_type) && r.from != r.to)
+        .filter(|r| [rate_type, RateType::CB].contains(&r.rate_type) && r.from != r.to)
     {
         if let Some(buy) = rate.buy {
             if buy > 0.0 {
@@ -85,7 +85,8 @@ pub fn generate_table(
     from: Currency,
     to: Currency,
     rates: &HashMap<Source, Vec<Rate>>,
-    is_rev: bool,
+    rate_type: RateType,
+    is_inv: bool,
 ) -> String {
     if from == to {
         return DUNNO.into();
@@ -103,15 +104,15 @@ pub fn generate_table(
     let mut table = vec![];
     let mut source_width: usize = 0;
     let mut rate_width: usize = 0;
-    let sort = if is_rev {
+    let sort = if is_inv {
         |a: f64, b: f64| a.partial_cmp(&b).expect("panic")
     } else {
         |a: f64, b: f64| b.partial_cmp(&a).expect("panic")
     };
     for (source, rates) in rates {
-        let graph = build_graph(&rates);
+        let graph = build_graph(&rates, rate_type);
         let mut paths = find_all_paths(&graph, from.clone(), to.clone());
-        if is_rev {
+        if is_inv {
             paths.iter_mut().for_each(|v| v.1 = 1.0 / v.1);
         }
         paths.sort_by(|a, b| sort(a.1, b.1));
@@ -413,7 +414,7 @@ mod tests {
     fn test_graph() -> Result<(), Box<dyn std::error::Error>> {
         let acba: acba::Response = serde_json::from_str(ACBA_DATA)?;
         let rates = parse_acba(acba)?;
-        let graph = build_graph(&rates);
+        let graph = build_graph(&rates, RateType::NoCash);
         let test_cases = get_test_cases();
         for (from, to) in test_cases {
             let mut paths = find_all_paths(&graph, from.clone(), to.clone());
@@ -429,8 +430,8 @@ mod tests {
         let rates = filter_collection(results);
         let test_cases = get_test_cases();
         for (from, to) in test_cases {
-            let _ = generate_table(from.clone(), to.clone(), &rates, false);
-            let _ = generate_table(to.clone(), from.clone(), &rates, true);
+            let _ = generate_table(from.clone(), to.clone(), &rates, RateType::NoCash, false);
+            let _ = generate_table(to.clone(), from.clone(), &rates, RateType::NoCash, true);
         }
         Ok(())
     }

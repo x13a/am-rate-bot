@@ -109,24 +109,29 @@ async fn collect_acba(client: &Client) -> Result<Vec<Rate>, Error> {
 
 pub(crate) fn parse_acba(resp: acba::Response) -> Result<Vec<Rate>, Error> {
     let result = resp.result.ok_or(Error::NoRates)?;
-    let mut rates: Vec<Rate> = result
-        .rates
-        .non_cash
-        .iter()
-        .map(|v| Rate {
-            from: v.currency.clone(),
-            to: Currency::default(),
-            rate_type: RateType::NoCash,
-            buy: Some(v.buy),
-            sell: Some(v.sell),
-        })
-        .collect();
+    let mut results = vec![];
+    for (rate_type, rates) in [
+        (RateType::NoCash, result.rates.non_cash),
+        (RateType::Cash, result.rates.cash),
+    ] {
+        let rates = rates
+            .iter()
+            .map(|v| Rate {
+                from: v.currency.clone(),
+                to: Currency::default(),
+                rate_type,
+                buy: Some(v.buy),
+                sell: Some(v.sell),
+            })
+            .collect::<Vec<_>>();
+        results.extend_from_slice(&rates);
+    }
     for rate in result.rates.cross {
         let currency = rate.currency.to_string();
         let Some((from, to)) = currency.split_once('/') else {
             continue;
         };
-        rates.push(Rate {
+        results.push(Rate {
             from: Currency::new(from),
             to: Currency::new(to),
             rate_type: RateType::NoCash,
@@ -134,22 +139,26 @@ pub(crate) fn parse_acba(resp: acba::Response) -> Result<Vec<Rate>, Error> {
             sell: Some(rate.sell),
         });
     }
-    Ok(rates)
+    Ok(results)
 }
 
 async fn collect_ameria(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: armsoft::Response = ameria::Response::get_rates(&client, RateType::NoCash).await?;
-    let rates = collect_armsoft(resp);
-    Ok(rates)
+    let mut results = vec![];
+    for rate_type in [RateType::NoCash, RateType::Cash] {
+        let resp: armsoft::Response = ameria::Response::get_rates(&client, rate_type).await?;
+        let rates = collect_armsoft(resp, rate_type);
+        results.extend_from_slice(&rates);
+    }
+    Ok(results)
 }
 
-fn collect_armsoft(resp: armsoft::Response) -> Vec<Rate> {
+fn collect_armsoft(resp: armsoft::Response, rate_type: RateType) -> Vec<Rate> {
     resp.array_of_exchange_rate
         .iter()
         .map(|v| Rate {
             from: v.currency.clone(),
             to: Currency::default(),
-            rate_type: RateType::NoCash,
+            rate_type,
             buy: Some(v.purchase),
             sell: Some(v.sale),
         })
@@ -158,37 +167,46 @@ fn collect_armsoft(resp: armsoft::Response) -> Vec<Rate> {
 
 async fn collect_ardshin(client: &Client) -> Result<Vec<Rate>, Error> {
     let resp: ardshin::Response = ardshin::Response::get_rates(&client).await?;
-    let rates = resp
-        .data
-        .currencies
-        .no_cash
-        .iter()
-        .map(|v| Rate {
-            from: v.curr_type.clone(),
-            to: Currency::default(),
-            rate_type: RateType::NoCash,
-            buy: Some(v.buy),
-            sell: Some(v.sell),
-        })
-        .collect();
-    Ok(rates)
+    let mut results = vec![];
+    for (rate_type, rates) in [
+        (RateType::NoCash, resp.data.currencies.no_cash),
+        (RateType::Cash, resp.data.currencies.cash),
+    ] {
+        let rates = rates
+            .iter()
+            .map(|v| Rate {
+                from: v.curr_type.clone(),
+                to: Currency::default(),
+                rate_type,
+                buy: Some(v.buy),
+                sell: Some(v.sell),
+            })
+            .collect::<Vec<_>>();
+        results.extend_from_slice(&rates);
+    }
+    Ok(results)
 }
 
 async fn collect_arm_swiss(client: &Client) -> Result<Vec<Rate>, Error> {
     let resp: arm_swiss::Response = arm_swiss::Response::get_rates(&client).await?;
-    let Some(lmasbrate) = resp.lmasbrate else {
-        return Err(Error::NoRates);
-    };
-    let rates = lmasbrate
-        .iter()
-        .map(|v| Rate {
-            from: v.iso.clone(),
+    let lmasbrate = resp.lmasbrate.ok_or(Error::NoRates)?;
+    let mut rates = vec![];
+    for rate in lmasbrate {
+        rates.push(Rate {
+            from: rate.iso.clone(),
             to: Currency::default(),
             rate_type: RateType::NoCash,
-            buy: Some(v.bid),
-            sell: Some(v.offer),
-        })
-        .collect();
+            buy: Some(rate.bid),
+            sell: Some(rate.offer),
+        });
+        rates.push(Rate {
+            from: rate.iso.clone(),
+            to: Currency::default(),
+            rate_type: RateType::Cash,
+            buy: Some(rate.bid_cash),
+            sell: Some(rate.offer_cash),
+        });
+    }
     Ok(rates)
 }
 
@@ -213,25 +231,33 @@ async fn collect_cb_am(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_evoca(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: armsoft::Response = evoca::Response::get_rates(&client, RateType::NoCash).await?;
-    let rates = collect_armsoft(resp);
-    Ok(rates)
+    let mut results = vec![];
+    for rate_type in [RateType::NoCash, RateType::Cash] {
+        let resp: armsoft::Response = evoca::Response::get_rates(&client, rate_type).await?;
+        let rates = collect_armsoft(resp, rate_type);
+        results.extend_from_slice(&rates);
+    }
+    Ok(results)
 }
 
 async fn collect_fast(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: fast::Response = fast::Response::get_rates(&client, RateType::NoCash).await?;
-    let items = resp.rates.ok_or(Error::NoRates)?;
-    let rates = items
-        .iter()
-        .map(|v| Rate {
-            from: v.id.clone(),
-            to: Currency::default(),
-            rate_type: RateType::NoCash,
-            buy: Some(v.buy),
-            sell: Some(v.sale),
-        })
-        .collect();
-    Ok(rates)
+    let mut results = vec![];
+    for rate_type in [RateType::NoCash, RateType::Cash] {
+        let resp: fast::Response = fast::Response::get_rates(&client, rate_type).await?;
+        let items = resp.rates.ok_or(Error::NoRates)?;
+        let rates = items
+            .iter()
+            .map(|v| Rate {
+                from: v.id.clone(),
+                to: Currency::default(),
+                rate_type,
+                buy: Some(v.buy),
+                sell: Some(v.sale),
+            })
+            .collect::<Vec<_>>();
+        results.extend_from_slice(&rates);
+    }
+    Ok(results)
 }
 
 async fn collect_ineco(client: &Client) -> Result<Vec<Rate>, Error> {
@@ -240,51 +266,73 @@ async fn collect_ineco(client: &Client) -> Result<Vec<Rate>, Error> {
         return Err(Error::NoRates);
     }
     let items = resp.items.ok_or(Error::NoRates)?;
-    let rates = items
-        .iter()
-        .filter(|v| v.cashless.buy.is_some() && v.cashless.sell.is_some())
-        .map(|v| Rate {
-            from: v.code.clone(),
-            to: Currency::default(),
-            rate_type: RateType::NoCash,
-            buy: v.cashless.buy,
-            sell: v.cashless.sell,
-        })
-        .collect();
+    let mut rates = vec![];
+    for item in items {
+        if item.cashless.buy.is_some() && item.cashless.sell.is_some() {
+            rates.push(Rate {
+                from: item.code.clone(),
+                to: Currency::default(),
+                rate_type: RateType::NoCash,
+                buy: item.cashless.buy,
+                sell: item.cashless.sell,
+            });
+        }
+        if item.cash.buy.is_some() && item.cash.sell.is_some() {
+            rates.push(Rate {
+                from: item.code.clone(),
+                to: Currency::default(),
+                rate_type: RateType::Cash,
+                buy: item.cash.buy,
+                sell: item.cash.sell,
+            });
+        }
+    }
     Ok(rates)
 }
 
 async fn collect_mellat(client: &Client) -> Result<Vec<Rate>, Error> {
     let resp: mellat::Response = mellat::Response::get_rates(&client).await?;
     let result = resp.result.ok_or(Error::NoRates)?;
-    let rates = result
-        .data
-        .iter()
-        .map(|v| Rate {
-            from: v.currency.clone(),
+    let mut rates = vec![];
+    for rate in result.data {
+        rates.push(Rate {
+            from: rate.currency.clone(),
             to: Currency::default(),
             rate_type: RateType::NoCash,
-            buy: Some(v.buy),
-            sell: Some(v.sell),
-        })
-        .collect();
+            buy: Some(rate.buy),
+            sell: Some(rate.sell),
+        });
+        rates.push(Rate {
+            from: rate.currency.clone(),
+            to: Currency::default(),
+            rate_type: RateType::Cash,
+            buy: Some(rate.buy_cash),
+            sell: Some(rate.sell_cash),
+        });
+    }
     Ok(rates)
 }
 
 async fn collect_converse(client: &Client) -> Result<Vec<Rate>, Error> {
     let resp: converse::Response = converse::Response::get_rates(&client).await?;
-    let rates = resp
-        .non_cash
-        .iter()
-        .map(|v| Rate {
-            from: v.currency.iso.clone(),
-            to: v.iso2.clone(),
-            rate_type: RateType::NoCash,
-            buy: Some(v.buy),
-            sell: Some(v.sell),
-        })
-        .collect();
-    Ok(rates)
+    let mut results = vec![];
+    for (rate_type, rates) in [
+        (RateType::NoCash, resp.non_cash),
+        (RateType::Cash, resp.cash),
+    ] {
+        let rates = rates
+            .iter()
+            .map(|v| Rate {
+                from: v.currency.iso.clone(),
+                to: v.iso2.clone(),
+                rate_type,
+                buy: Some(v.buy),
+                sell: Some(v.sell),
+            })
+            .collect::<Vec<_>>();
+        results.extend_from_slice(&rates);
+    }
+    Ok(results)
 }
 
 async fn collect_aeb(client: &Client) -> Result<Vec<Rate>, Error> {
@@ -292,12 +340,14 @@ async fn collect_aeb(client: &Client) -> Result<Vec<Rate>, Error> {
     let mut rates = vec![];
     for item in resp.rate_currency_settings {
         for rate in item.rates.iter().filter(|v| {
-            v.rate_type == RateType::NoCash && v.buy_rate.is_some() && v.sell_rate.is_some()
+            [RateType::NoCash, RateType::Cash].contains(&v.rate_type)
+                && v.buy_rate.is_some()
+                && v.sell_rate.is_some()
         }) {
             rates.push(Rate {
                 from: item.currency_code.clone(),
                 to: resp.main_currency_code.clone(),
-                rate_type: RateType::NoCash,
+                rate_type: rate.rate_type,
                 buy: rate.buy_rate,
                 sell: rate.sell_rate,
             });
@@ -339,47 +389,74 @@ async fn collect_unibank(client: &Client) -> Result<Vec<Rate>, Error> {
 
 fn collect_lsoft(resp: lsoft::Response) -> Result<Vec<Rate>, Error> {
     let items = resp.get_currency_list.currency_list.ok_or(Error::NoRates)?;
-    let rates = items
-        .iter()
-        .filter(|v| v.buy.is_some() && v.sell.is_some())
-        .map(|v| Rate {
-            from: v.external_id.clone(),
-            to: Currency::default(),
-            rate_type: RateType::NoCash,
-            buy: v.buy,
-            sell: v.sell,
-        })
-        .collect();
+    let mut rates = vec![];
+    for item in items {
+        if item.buy.is_some() && item.sell.is_some() {
+            rates.push(Rate {
+                from: item.external_id.clone(),
+                to: Currency::default(),
+                rate_type: RateType::NoCash,
+                buy: item.buy,
+                sell: item.sell,
+            });
+        }
+        if item.csh_buy.is_some() && item.csh_sell.is_some() {
+            rates.push(Rate {
+                from: item.external_id.clone(),
+                to: Currency::default(),
+                rate_type: RateType::Cash,
+                buy: item.csh_buy,
+                sell: item.csh_sell,
+            });
+        }
+    }
     Ok(rates)
 }
 
 async fn collect_amio(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: armsoft::Response = amio::Response::get_rates(&client, RateType::NoCash).await?;
-    let rates = collect_armsoft(resp);
-    Ok(rates)
+    let mut results = vec![];
+    for rate_type in [RateType::NoCash, RateType::Cash] {
+        let resp: armsoft::Response = amio::Response::get_rates(&client, rate_type).await?;
+        let rates = collect_armsoft(resp, rate_type);
+        results.extend_from_slice(&rates);
+    }
+    Ok(results)
 }
 
 async fn collect_byblos(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: armsoft::Response = byblos::Response::get_rates(&client, RateType::NoCash).await?;
-    let rates = collect_armsoft(resp);
-    Ok(rates)
+    let mut results = vec![];
+    for rate_type in [RateType::NoCash, RateType::Cash] {
+        let resp: armsoft::Response = byblos::Response::get_rates(&client, rate_type).await?;
+        let rates = collect_armsoft(resp, rate_type);
+        results.extend_from_slice(&rates);
+    }
+    Ok(results)
 }
 
 async fn collect_idbank(client: &Client) -> Result<Vec<Rate>, Error> {
     let resp: idbank::Response = idbank::Response::get_rates(&client).await?;
     let result = resp.result.ok_or(Error::NoRates)?;
-    let rates = result
-        .currency_rate
-        .iter()
-        .filter(|v| v.buy.is_some() && v.sell.is_some())
-        .map(|v| Rate {
-            from: v.iso_txt.clone(),
-            to: Currency::default(),
-            rate_type: RateType::NoCash,
-            buy: v.buy,
-            sell: v.sell,
-        })
-        .collect();
+    let mut rates = vec![];
+    for rate in result.currency_rate {
+        if rate.buy.is_some() && rate.sell.is_some() {
+            rates.push(Rate {
+                from: rate.iso_txt.clone(),
+                to: Currency::default(),
+                rate_type: RateType::NoCash,
+                buy: rate.buy,
+                sell: rate.sell,
+            });
+        }
+        if rate.csh_buy.is_some() && rate.csh_sell.is_some() {
+            rates.push(Rate {
+                from: rate.iso_txt.clone(),
+                to: Currency::default(),
+                rate_type: RateType::Cash,
+                buy: rate.csh_buy,
+                sell: rate.csh_sell,
+            });
+        }
+    }
     Ok(rates)
 }
 
@@ -420,9 +497,13 @@ async fn collect_moex(client: &Client) -> Result<Vec<Rate>, Error> {
 }
 
 async fn collect_ararat(client: &Client) -> Result<Vec<Rate>, Error> {
-    let resp: armsoft::Response = ararat::Response::get_rates(&client, RateType::NoCash).await?;
-    let rates = collect_armsoft(resp);
-    Ok(rates)
+    let mut results = vec![];
+    for rate_type in [RateType::NoCash, RateType::Cash] {
+        let resp: armsoft::Response = ararat::Response::get_rates(&client, rate_type).await?;
+        let rates = collect_armsoft(resp, rate_type);
+        results.extend_from_slice(&rates);
+    }
+    Ok(results)
 }
 
 async fn collect_idpay(client: &Client) -> Result<Vec<Rate>, Error> {

@@ -21,6 +21,7 @@ pub mod idbank;
 pub mod ineco;
 pub mod lsoft;
 pub mod mellat;
+pub mod mir;
 pub mod moex;
 pub mod unibank;
 mod utils;
@@ -57,7 +58,7 @@ pub trait SourceCashUrlTrait {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Source {
     CbAm,
-    MOEX,
+    MoEx,
     Acba,
     Ameria,
     Ardshin,
@@ -76,13 +77,14 @@ pub enum Source {
     IdBank,
     Ararat,
     IdPay,
+    Mir,
 }
 
 impl Source {
     pub fn iter() -> impl Iterator<Item = Source> {
         [
             Self::CbAm,
-            Self::MOEX,
+            Self::MoEx,
             Self::Acba,
             Self::Ameria,
             Self::Ardshin,
@@ -101,6 +103,7 @@ impl Source {
             Self::IdBank,
             Self::Ararat,
             Self::IdPay,
+            Self::Mir,
         ]
         .iter()
         .copied()
@@ -115,15 +118,15 @@ impl Source {
     }
 
     pub fn get_not_banks() -> Vec<Self> {
-        [Self::CbAm, Self::MOEX, Self::IdPay].into()
+        [Self::CbAm, Self::MoEx, Self::IdPay, Self::Mir].into()
     }
 }
 
 impl Display for Source {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let s: String = match self {
-            Source::CbAm => "CB AM".into(),
-            Source::MOEX => "MOEX'".into(),
+            Source::CbAm => "CBAM".into(),
+            Source::MoEx => "MOEX'".into(),
             Source::Acba => "Acba".into(),
             Source::Ameria => "Ameria".into(),
             Source::Ardshin => "Ardshin".into(),
@@ -137,11 +140,12 @@ impl Display for Source {
             Source::VtbAm => "VTB AM".into(),
             Source::Artsakh => "Artsakh".into(),
             Source::UniBank => "UniBank".into(),
-            Source::Amio => "Amio".into(),
+            Source::Amio => "AMIO".into(),
             Source::Byblos => "Byblos".into(),
             Source::IdBank => "IdBank".into(),
             Source::Ararat => "Ararat".into(),
             Source::IdPay => "IdPay'".into(),
+            Source::Mir => "MIR".into(),
         };
         write!(f, "{}", s)
     }
@@ -409,6 +413,13 @@ mod tests {
     async fn test_idpay() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         let _: idbank::Response = idbank::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_mir() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: mir::Response = mir::Response::get_rates(&c).await?;
         Ok(())
     }
 }

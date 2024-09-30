@@ -1,8 +1,8 @@
 use crate::sources;
 use crate::sources::{
     acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, byblos, cb_am, converse,
-    evoca, fast, idbank, ineco, lsoft, mellat, moex, unibank, vtb_am, Currency, RateType, Source,
-    SourceAphenaTrait, SourceCashUrlTrait, SourceSingleUrlTrait,
+    evoca, fast, idbank, ineco, lsoft, mellat, mir, moex, unibank, vtb_am, Currency, RateType,
+    Source, SourceAphenaTrait, SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
 use std::collections::HashMap;
@@ -74,9 +74,10 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::Amio => collect_amio(&client).await?,
         Source::Byblos => collect_byblos(&client).await?,
         Source::IdBank => collect_idbank(&client).await?,
-        Source::MOEX => collect_moex(&client).await?,
+        Source::MoEx => collect_moex(&client).await?,
         Source::Ararat => collect_ararat(&client).await?,
         Source::IdPay => collect_idpay(&client).await?,
+        Source::Mir => collect_mir(&client).await?,
     };
     Ok(rates)
 }
@@ -528,6 +529,37 @@ async fn collect_idpay(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
+async fn collect_mir(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: mir::Response = mir::Response::get_rates(&client).await?;
+    let rates = resp
+        .content
+        .iter()
+        .filter(|v| v.currency.strcode == Currency::default())
+        .map(|v| {
+            let buy = Some(1.0 / v.value_sell);
+            let sell = Some(1.0 / v.value_buy);
+            [
+                Rate {
+                    from: Currency::rub(),
+                    to: Currency::default(),
+                    rate_type: RateType::NoCash,
+                    buy,
+                    sell,
+                },
+                Rate {
+                    from: Currency::rub(),
+                    to: Currency::default(),
+                    rate_type: RateType::Cash,
+                    buy,
+                    sell,
+                },
+            ]
+        })
+        .flatten()
+        .collect();
+    Ok(rates)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -664,7 +696,7 @@ mod tests {
     #[tokio::test]
     async fn test_collect_moex() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
-        collect(&c, Source::MOEX).await?;
+        collect(&c, Source::MoEx).await?;
         Ok(())
     }
 
@@ -679,6 +711,13 @@ mod tests {
     async fn test_collect_idpay() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::IdPay).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_mir() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::Mir).await?;
         Ok(())
     }
 }

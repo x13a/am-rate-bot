@@ -42,11 +42,11 @@ impl Storage {
 )]
 enum Command {
     #[command(description = "AMD/USD")]
-    USD,
+    Usd,
     #[command(description = "AMD/EUR")]
-    EUR,
+    Eur,
     #[command(description = "RUB/AMD")]
-    RUB,
+    Rub,
     #[command(description = "RUB/USD")]
     RubUsd,
     #[command(description = "RUB/EUR")]
@@ -115,7 +115,7 @@ async fn command(
         Command::Start => {
             bot.send_message(msg.chat.id, "Meow!").await?;
         }
-        Command::USD | Command::UsdCash => {
+        Command::Usd | Command::UsdCash => {
             exchange_repl(
                 Currency::default(),
                 Currency::usd(),
@@ -130,7 +130,7 @@ async fn command(
             )
             .await?
         }
-        Command::EUR | Command::EurCash => {
+        Command::Eur | Command::EurCash => {
             exchange_repl(
                 Currency::default(),
                 Currency::eur(),
@@ -145,7 +145,7 @@ async fn command(
             )
             .await?
         }
-        Command::RUB | Command::RubCash => {
+        Command::Rub | Command::RubCash => {
             exchange_repl(
                 Currency::rub(),
                 Currency::default(),

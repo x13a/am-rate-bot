@@ -511,18 +511,20 @@ async fn collect_idpay(client: &Client) -> Result<Vec<Rate>, Error> {
     let resp: idbank::Response = idbank::Response::get_rates(&client).await?;
     let result = resp.result.ok_or(Error::NoRates)?;
     const COMMISSION_RATE: f64 = 0.9;
+    const RU_CARD_COMMISSION_RATE: f64 = 0.3;
     let rates = result
         .currency_rate
         .iter()
         .filter(|v| v.buy.is_some() && v.sell.is_some() && v.iso_txt == Currency::rub())
         .map(|v| {
             let buy = v.buy.unwrap();
+            let sell = v.sell.unwrap();
             Rate {
                 from: v.iso_txt.clone(),
                 to: Currency::default(),
                 rate_type: RateType::NoCash,
                 buy: Some(buy - (COMMISSION_RATE / 100.0 * buy)),
-                sell: None,
+                sell: Some(sell + ((COMMISSION_RATE + RU_CARD_COMMISSION_RATE) / 100.0 * sell)),
             }
         })
         .collect();

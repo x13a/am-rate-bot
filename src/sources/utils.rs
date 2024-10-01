@@ -19,7 +19,7 @@ where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    Ok(Currency::new(&s))
+    Ok(Currency::from(&s))
 }
 
 pub(crate) fn de_rate_type<'de, D>(deserializer: D) -> Result<RateType, D::Error>
@@ -27,8 +27,8 @@ where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    let rt = RateType::from_str(&s).map_err(de::Error::custom)?;
-    Ok(rt)
+    let v = RateType::from_str(&s).map_err(de::Error::custom)?;
+    Ok(v)
 }
 
 pub(crate) fn de_option_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>

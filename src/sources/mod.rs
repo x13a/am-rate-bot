@@ -2,6 +2,7 @@ pub use lsoft::SourceAphenaTrait;
 use serde::de::DeserializeOwned;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
+use strum::EnumIter;
 
 pub mod acba;
 pub mod aeb;
@@ -23,6 +24,7 @@ pub mod lsoft;
 pub mod mellat;
 pub mod mir;
 pub mod moex;
+pub mod sas;
 pub mod unibank;
 mod utils;
 pub mod vtb_am;
@@ -55,9 +57,11 @@ pub trait SourceCashUrlTrait {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter, strum::Display)]
 pub enum Source {
+    #[strum(serialize = "CBAM")]
     CbAm,
+    #[strum(serialize = "MOEX")]
     MoEx,
     Acba,
     Ameria,
@@ -69,46 +73,23 @@ pub enum Source {
     Mellat,
     Converse,
     AEB,
+    #[strum(serialize = "VTB AM")]
     VtbAm,
     Artsakh,
     UniBank,
+    #[strum(serialize = "AMIO")]
     Amio,
     Byblos,
     IdBank,
     Ararat,
     IdPay,
+    #[strum(serialize = "MIR")]
     Mir,
+    #[strum(serialize = "SAS")]
+    Sas,
 }
 
 impl Source {
-    pub fn iter() -> impl Iterator<Item = Source> {
-        [
-            Self::CbAm,
-            Self::MoEx,
-            Self::Acba,
-            Self::Ameria,
-            Self::Ardshin,
-            Self::ArmSwiss,
-            Self::Evoca,
-            Self::Fast,
-            Self::Ineco,
-            Self::Mellat,
-            Self::Converse,
-            Self::AEB,
-            Self::VtbAm,
-            Self::Artsakh,
-            Self::UniBank,
-            Self::Amio,
-            Self::Byblos,
-            Self::IdBank,
-            Self::Ararat,
-            Self::IdPay,
-            Self::Mir,
-        ]
-        .iter()
-        .copied()
-    }
-
     pub fn prefix(&self) -> &str {
         if Self::get_not_banks().contains(self) {
             "#"
@@ -118,36 +99,7 @@ impl Source {
     }
 
     pub fn get_not_banks() -> Vec<Self> {
-        [Self::CbAm, Self::MoEx, Self::IdPay, Self::Mir].into()
-    }
-}
-
-impl Display for Source {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let s: String = match self {
-            Source::CbAm => "CBAM".into(),
-            Source::MoEx => "MOEX'".into(),
-            Source::Acba => "Acba".into(),
-            Source::Ameria => "Ameria".into(),
-            Source::Ardshin => "Ardshin".into(),
-            Source::ArmSwiss => "ArmSwiss".into(),
-            Source::Evoca => "Evoca".into(),
-            Source::Fast => "Fast".into(),
-            Source::Ineco => "Ineco".into(),
-            Source::Mellat => "Mellat".into(),
-            Source::Converse => "Converse".into(),
-            Source::AEB => "AEB".into(),
-            Source::VtbAm => "VTB AM".into(),
-            Source::Artsakh => "Artsakh".into(),
-            Source::UniBank => "UniBank".into(),
-            Source::Amio => "AMIO".into(),
-            Source::Byblos => "Byblos".into(),
-            Source::IdBank => "IdBank".into(),
-            Source::Ararat => "Ararat".into(),
-            Source::IdPay => "IdPay'".into(),
-            Source::Mir => "MIR".into(),
-        };
-        write!(f, "{}", s)
+        [Self::CbAm, Self::MoEx, Self::IdPay, Self::Mir, Self::Sas].into()
     }
 }
 
@@ -159,10 +111,6 @@ impl Currency {
     pub const USD: &'static str = "USD";
     pub const EUR: &'static str = "EUR";
     pub const RUB: &'static str = "RUB";
-
-    pub fn new(s: &str) -> Self {
-        Self(s.trim().to_uppercase().replace("RUR", Self::RUB))
-    }
 
     pub fn usd() -> Self {
         Self(Self::USD.into())
@@ -177,17 +125,18 @@ impl Currency {
     }
 }
 
-impl Display for Currency {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+impl<S> From<S> for Currency
+where
+    S: AsRef<str>,
+{
+    fn from(s: S) -> Self {
+        Self(s.as_ref().trim().to_uppercase().replace("RUR", Self::RUB))
     }
 }
 
-impl FromStr for Currency {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Currency::new(s))
+impl Display for Currency {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -227,6 +176,7 @@ pub enum Error {
     Reqwest(reqwest::Error),
     Xml(quick_xml::DeError),
     InvalidRateType,
+    Html,
 }
 
 impl From<reqwest::Error> for Error {
@@ -420,6 +370,13 @@ mod tests {
     async fn test_mir() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         let _: mir::Response = mir::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_sas() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: sas::Response = sas::Response::get_rates(&c).await?;
         Ok(())
     }
 }

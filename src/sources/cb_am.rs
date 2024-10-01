@@ -77,7 +77,10 @@ impl Response {
     pub async fn get_rates(c: &reqwest::Client) -> Result<Self, Error> {
         let body = c
             .post(Self::url())
-            .header("Content-Type", "application/soap+xml; charset=utf-8")
+            .header(
+                reqwest::header::CONTENT_TYPE,
+                "application/soap+xml; charset=utf-8",
+            )
             .body(SOAP12_EXCHANGE_RATES_LATEST)
             .send()
             .await?

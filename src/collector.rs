@@ -1,12 +1,13 @@
 use crate::sources;
 use crate::sources::{
     acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, byblos, cb_am, converse,
-    evoca, fast, idbank, ineco, lsoft, mellat, mir, moex, unibank, vtb_am, Currency, RateType,
+    evoca, fast, idbank, ineco, lsoft, mellat, mir, moex, sas, unibank, vtb_am, Currency, RateType,
     Source, SourceAphenaTrait, SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
+use strum::IntoEnumIterator;
 use tokio::sync::mpsc;
 
 #[derive(Debug, Clone)]
@@ -78,6 +79,7 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::Ararat => collect_ararat(&client).await?,
         Source::IdPay => collect_idpay(&client).await?,
         Source::Mir => collect_mir(&client).await?,
+        Source::Sas => collect_sas(&client).await?,
     };
     Ok(rates)
 }
@@ -133,8 +135,8 @@ pub(crate) fn parse_acba(resp: acba::Response) -> Result<Vec<Rate>, Error> {
             continue;
         };
         results.push(Rate {
-            from: Currency::new(from),
-            to: Currency::new(to),
+            from: Currency::from(from),
+            to: Currency::from(to),
             rate_type: RateType::NoCash,
             buy: Some(rate.buy),
             sell: Some(rate.sell),
@@ -562,6 +564,22 @@ async fn collect_mir(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
+async fn collect_sas(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: sas::Response = sas::Response::get_rates(&client).await?;
+    let rates = resp
+        .rates
+        .iter()
+        .map(|v| Rate {
+            from: v.currency.clone(),
+            to: Currency::default(),
+            rate_type: RateType::Cash,
+            buy: v.buy,
+            sell: v.sell,
+        })
+        .collect();
+    Ok(rates)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -720,6 +738,13 @@ mod tests {
     async fn test_collect_mir() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::Mir).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_sas() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::Sas).await?;
         Ok(())
     }
 }

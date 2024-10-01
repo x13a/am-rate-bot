@@ -61,7 +61,7 @@ pub trait SourceCashUrlTrait {
 pub enum Source {
     #[strum(serialize = "CBAM")]
     CbAm,
-    #[strum(serialize = "MOEX")]
+    #[strum(serialize = "MOEX'")]
     MoEx,
     Acba,
     Ameria,
@@ -82,6 +82,7 @@ pub enum Source {
     Byblos,
     IdBank,
     Ararat,
+    #[strum(serialize = "IdPay'")]
     IdPay,
     #[strum(serialize = "MIR")]
     Mir,

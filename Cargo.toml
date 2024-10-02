@@ -18,5 +18,5 @@ quick-xml = { version = "0.36.2", features = ["serialize"] }
 
 # sugar
 strum = { version = "0.26.3", features = ["derive"] }
-# sas source html parser
+# hsbc/sas source html parser
 select = "0.6.0"

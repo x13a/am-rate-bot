@@ -1,23 +1,14 @@
 use crate::sources;
 use crate::sources::{
     acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, byblos, cb_am, converse,
-    evoca, fast, idbank, ineco, lsoft, mellat, mir, moex, sas, unibank, vtb_am, Currency, RateType,
-    Source, SourceAphenaTrait, SourceCashUrlTrait, SourceSingleUrlTrait,
+    evoca, fast, hsbc, idbank, ineco, lsoft, mellat, mir, moex, sas, unibank, vtb_am, Currency,
+    Rate, RateType, Source, SourceAphenaTrait, SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use strum::IntoEnumIterator;
 use tokio::sync::mpsc;
-
-#[derive(Debug, Clone)]
-pub struct Rate {
-    pub(crate) from: Currency,
-    pub(crate) to: Currency,
-    pub(crate) rate_type: RateType,
-    pub(crate) buy: Option<f64>,
-    pub(crate) sell: Option<f64>,
-}
 
 pub async fn collect_all(client: &Client) -> HashMap<Source, Result<Vec<Rate>, Error>> {
     let mut results = HashMap::new();
@@ -80,6 +71,7 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
         Source::IdPay => collect_idpay(&client).await?,
         Source::Mir => collect_mir(&client).await?,
         Source::Sas => collect_sas(&client).await?,
+        Source::Hsbc => collect_hsbc(&client).await?,
     };
     Ok(rates)
 }
@@ -569,13 +561,19 @@ async fn collect_sas(client: &Client) -> Result<Vec<Rate>, Error> {
     let rates = resp
         .rates
         .iter()
-        .map(|v| Rate {
-            from: v.currency.clone(),
-            to: Currency::default(),
-            rate_type: RateType::Cash,
-            buy: v.buy,
-            sell: v.sell,
-        })
+        .filter(|v| v.buy.is_some() && v.sell.is_some())
+        .cloned()
+        .collect();
+    Ok(rates)
+}
+
+async fn collect_hsbc(client: &Client) -> Result<Vec<Rate>, Error> {
+    let resp: hsbc::Response = hsbc::Response::get_rates(&client).await?;
+    let rates = resp
+        .rates
+        .iter()
+        .filter(|v| v.buy.is_some() && v.sell.is_some())
+        .cloned()
         .collect();
     Ok(rates)
 }
@@ -745,6 +743,13 @@ mod tests {
     async fn test_collect_sas() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         collect(&c, Source::Sas).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_hsbc() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        collect(&c, Source::Hsbc).await?;
         Ok(())
     }
 }

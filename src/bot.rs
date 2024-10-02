@@ -1,6 +1,5 @@
-use crate::collector::Rate;
 use crate::generator::generate_table;
-use crate::sources::{Currency, RateType, Source};
+use crate::sources::{Currency, Rate, RateType, Source};
 use crate::DUNNO;
 use std::collections::HashMap;
 use std::sync::Arc;

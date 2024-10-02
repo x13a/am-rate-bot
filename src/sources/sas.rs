@@ -1,4 +1,4 @@
-use crate::sources::{Currency, Error};
+use crate::sources::{Currency, Error, Rate, RateType};
 use select::document::Document;
 use select::predicate::Class;
 
@@ -9,15 +9,8 @@ pub struct Response {
     pub rates: Vec<Rate>,
 }
 
-#[derive(Debug)]
-pub struct Rate {
-    pub currency: Currency,
-    pub buy: Option<f64>,
-    pub sell: Option<f64>,
-}
-
 impl Response {
-    fn url() -> String {
+    pub fn url() -> String {
         API_URL.into()
     }
 
@@ -35,7 +28,9 @@ impl Response {
             let buy = cells.next().ok_or(Error::Html)?.text();
             let sell = cells.next().ok_or(Error::Html)?.text();
             let rate = Rate {
-                currency: Currency::from(currency.trim()),
+                from: Currency::from(currency),
+                to: Currency::default(),
+                rate_type: RateType::Cash,
                 buy: buy.trim().parse().ok(),
                 sell: sell.trim().parse().ok(),
             };

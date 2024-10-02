@@ -18,6 +18,7 @@ pub mod cb_am;
 pub mod converse;
 pub mod evoca;
 pub mod fast;
+pub mod hsbc;
 pub mod idbank;
 pub mod ineco;
 pub mod lsoft;
@@ -88,6 +89,8 @@ pub enum Source {
     Mir,
     #[strum(serialize = "SAS")]
     Sas,
+    #[strum(serialize = "HSBC")]
+    Hsbc,
 }
 
 impl Source {
@@ -199,6 +202,15 @@ impl Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+#[derive(Debug, Clone)]
+pub struct Rate {
+    pub from: Currency,
+    pub to: Currency,
+    pub rate_type: RateType,
+    pub buy: Option<f64>,
+    pub sell: Option<f64>,
+}
 
 #[cfg(test)]
 mod tests {
@@ -378,6 +390,13 @@ mod tests {
     async fn test_sas() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;
         let _: sas::Response = sas::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_hsbc() -> Result<(), Box<dyn std::error::Error>> {
+        let c = build_client()?;
+        let _: hsbc::Response = hsbc::Response::get_rates(&c).await?;
         Ok(())
     }
 }

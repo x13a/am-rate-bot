@@ -91,6 +91,7 @@ pub fn generate_table(
         return DUNNO.into();
     }
 
+    #[derive(Debug)]
     struct Row {
         source: Source,
         rate: f64,
@@ -137,7 +138,16 @@ pub fn generate_table(
             });
         }
     }
-    table.sort_by(|a, b| sort(a.rate, b.rate));
+    table.sort_by(|a, b| {
+        match sort(a.rate, b.rate) {
+            std::cmp::Ordering::Equal => {
+                let a_source = a.source.to_string();
+                let b_source = b.source.to_string();
+                a_source.cmp(&b_source)
+            }
+            other => other,
+        }
+    });
     let best_rate = table
         .iter()
         .filter(|r| !Source::get_not_banks().contains(&r.source))

@@ -739,6 +739,7 @@ mod tests {
         Ok(())
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_collect_sas() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;

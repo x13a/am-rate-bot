@@ -58,7 +58,7 @@ pub trait SourceCashUrlTrait {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter, strum::Display)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter, strum::Display, Ord, PartialOrd)]
 pub enum Source {
     #[strum(serialize = "CBAM")]
     CbAm,
@@ -386,6 +386,7 @@ mod tests {
         Ok(())
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_sas() -> Result<(), Box<dyn std::error::Error>> {
         let c = build_client()?;

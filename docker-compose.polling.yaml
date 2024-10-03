@@ -1,5 +1,5 @@
 services:
-  web:
+  bot:
     build: .
     image: 'am-rate-bot'
     container_name: 'am-rate-bot'

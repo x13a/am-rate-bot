@@ -2,10 +2,12 @@ use crate::generator::generate_table;
 use crate::sources::{Currency, Rate, RateType, Source};
 use crate::DUNNO;
 use std::collections::HashMap;
+use std::env;
 use std::sync::Arc;
 use std::time::SystemTime;
 use teloxide::adaptors::DefaultParseMode;
-use teloxide::types::ParseMode;
+use teloxide::types::{InputFile, ParseMode};
+use teloxide::update_listeners::webhooks;
 use teloxide::{prelude::*, utils::command::BotCommands, utils::html};
 use tokio::sync::Mutex;
 
@@ -88,13 +90,40 @@ pub async fn run(db: Arc<Storage>) {
             .filter_command::<Command>()
             .endpoint(command),
     );
-    Dispatcher::builder(bot, handler)
+    let mut dispatcher = Dispatcher::builder(bot.clone(), handler)
         .dependencies(dptree::deps![db])
-        .default_handler(|_| async {})
         .enable_ctrlc_handler()
-        .build()
-        .dispatch()
-        .await;
+        .build();
+    let is_polling = env::var("POLLING").expect("panic").parse().expect("panic");
+    if is_polling {
+        dispatcher.dispatch().await;
+    } else {
+        let host = env::var("HOST").expect("panic");
+        let port = env::var("PORT").expect("panic").parse().expect("panic");
+        let cert = env::var("CERT").expect("panic");
+        let url = format!("https://{host}:{port}/am-rate-bot/webhook/")
+            .parse()
+            .expect("panic");
+        let listener = webhooks::axum(
+            bot.clone(),
+            webhooks::Options {
+                address: ([0, 0, 0, 0], port).into(),
+                url,
+                path: "/".into(),
+                certificate: Some(InputFile::file(cert)),
+                max_connections: None,
+                drop_pending_updates: false,
+                secret_token: None,
+            },
+        )
+        .await
+        .expect("panic");
+        let error_handler =
+            LoggingErrorHandler::with_custom_text("An error from the update listener");
+        dispatcher
+            .dispatch_with_listener(listener, error_handler)
+            .await;
+    }
 }
 
 async fn command(

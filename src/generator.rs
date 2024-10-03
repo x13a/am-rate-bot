@@ -138,15 +138,13 @@ pub fn generate_table(
             });
         }
     }
-    table.sort_by(|a, b| {
-        match sort(a.rate, b.rate) {
-            std::cmp::Ordering::Equal => {
-                let a_source = a.source.to_string();
-                let b_source = b.source.to_string();
-                a_source.cmp(&b_source)
-            }
-            other => other,
+    table.sort_by(|a, b| match sort(a.rate, b.rate) {
+        std::cmp::Ordering::Equal => {
+            let a_source = a.source.to_string();
+            let b_source = b.source.to_string();
+            a_source.cmp(&b_source)
         }
+        other => other,
     });
     let best_rate = table
         .iter()

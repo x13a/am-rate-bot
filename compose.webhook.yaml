@@ -4,7 +4,7 @@ services:
     image: 'am-rate-bot'
     container_name: 'am-rate-bot'
     env_file:
-      - 'config/bot.env'
+      - './config/bot.env'
     volumes:
       - './certs/cert.pem:/certs/cert.pem:ro'
     networks:

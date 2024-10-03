@@ -101,7 +101,7 @@ pub async fn run(db: Arc<Storage>) {
         let host = env::var("HOST").expect("panic");
         let port = env::var("PORT").expect("panic").parse().expect("panic");
         let cert = env::var("CERT").expect("panic");
-        let url = format!("https://{host}:{port}/am-rate-bot/webhook/")
+        let url = format!("https://{host}/am-rate-bot/webhook/")
             .parse()
             .expect("panic");
         let listener = webhooks::axum(

@@ -85,8 +85,8 @@ pub async fn run(db: Arc<Storage>) {
     bot.set_my_commands(Command::bot_commands())
         .await
         .expect("panic");
-    let handler = Update::filter_message().branch(
-        dptree::entry()
+    let handler = dptree::entry().branch(
+        Update::filter_message()
             .filter_command::<Command>()
             .endpoint(command),
     );

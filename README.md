@@ -17,7 +17,7 @@ You have to set `TELOXIDE_TOKEN` env to your telegram bot token in `config/bot.e
 ## Run
 
 ```shell
-docker compose -f ./docker-compose.polling.yaml up -d
+docker compose -f ./compose.polling.yaml up -d
 ```
 
 ## License

@@ -16,7 +16,7 @@ struct Opts {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opts: Opts = argh::from_env();
     let db = bot::Storage::new();

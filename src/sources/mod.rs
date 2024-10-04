@@ -32,7 +32,7 @@ pub mod vtb_am;
 
 pub trait SourceSingleUrlTrait {
     fn url() -> String;
-    async fn get_rates<T>(c: &reqwest::Client) -> Result<T, Error>
+    async fn get_rates<T>(c: &reqwest::Client) -> anyhow::Result<T>
     where
         T: DeserializeOwned,
     {
@@ -44,14 +44,14 @@ pub trait SourceSingleUrlTrait {
 pub trait SourceCashUrlTrait {
     fn url_cash() -> String;
     fn url_no_cash() -> String;
-    async fn get_rates<T>(c: &reqwest::Client, rate_type: RateType) -> Result<T, Error>
+    async fn get_rates<T>(c: &reqwest::Client, rate_type: RateType) -> anyhow::Result<T>
     where
         T: DeserializeOwned,
     {
         let url = match rate_type {
             RateType::NoCash => Self::url_no_cash(),
             RateType::Cash => Self::url_cash(),
-            _ => return Err(Error::InvalidRateType),
+            _ => Err(Error::InvalidRateType)?,
         };
         let resp = c.get(url).send().await?.json::<T>().await?;
         Ok(resp)
@@ -175,33 +175,13 @@ impl FromStr for RateType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    Reqwest(reqwest::Error),
-    Xml(quick_xml::DeError),
+    #[error("invalid rate type")]
     InvalidRateType,
+    #[error("html parse error")]
     Html,
 }
-
-impl From<reqwest::Error> for Error {
-    fn from(e: reqwest::Error) -> Self {
-        Self::Reqwest(e)
-    }
-}
-
-impl From<quick_xml::DeError> for Error {
-    fn from(e: quick_xml::DeError) -> Self {
-        Self::Xml(e)
-    }
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl std::error::Error for Error {}
 
 #[derive(Debug, Clone)]
 pub struct Rate {
@@ -226,14 +206,14 @@ mod tests {
             .build()
     }
     #[tokio::test]
-    async fn test_acba() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_acba() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: acba::Response = acba::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_ameria() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_ameria() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: armsoft::Response = ameria::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -242,14 +222,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_ardshin() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_ardshin() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: ardshin::Response = ardshin::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_evoca() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_evoca() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: armsoft::Response = evoca::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -258,7 +238,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fast() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_fast() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: fast::Response = fast::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -267,42 +247,42 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_ineco() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_ineco() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: ineco::Response = ineco::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_mellat() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_mellat() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: mellat::Response = mellat::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_arm_swiss() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_arm_swiss() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: arm_swiss::Response = arm_swiss::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_cb_am() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_cb_am() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: cb_am::Response = cb_am::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_converse() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_converse() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: converse::Response = converse::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_aeb() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_aeb() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: aeb::Response = aeb::Response::get_rates(&c).await?;
         Ok(())
@@ -310,28 +290,28 @@ mod tests {
 
     #[ignore]
     #[tokio::test]
-    async fn test_vtb_am() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_vtb_am() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: vtb_am::Response = vtb_am::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_artsakh() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_artsakh() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: lsoft::Response = artsakh::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_unibank() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_unibank() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: lsoft::Response = unibank::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_amio() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_amio() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: armsoft::Response = amio::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -340,7 +320,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_byblos() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_byblos() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: armsoft::Response = byblos::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -349,21 +329,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_idbank() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_idbank() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: idbank::Response = idbank::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_moex() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_moex() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: moex::Response = moex::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_ararat() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_ararat() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: armsoft::Response = ararat::Response::get_rates(&c, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -373,14 +353,14 @@ mod tests {
 
     #[ignore]
     #[tokio::test]
-    async fn test_idpay() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_idpay() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: idbank::Response = idbank::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_mir() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_mir() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: mir::Response = mir::Response::get_rates(&c).await?;
         Ok(())
@@ -388,14 +368,14 @@ mod tests {
 
     #[ignore]
     #[tokio::test]
-    async fn test_sas() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_sas() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: sas::Response = sas::Response::get_rates(&c).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_hsbc() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_hsbc() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: hsbc::Response = hsbc::Response::get_rates(&c).await?;
         Ok(())

@@ -1,4 +1,3 @@
-use crate::sources;
 use crate::sources::{
     acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, byblos, cb_am, converse,
     evoca, fast, hsbc, idbank, ineco, lsoft, mellat, mir, moex, sas, unibank, vtb_am, Currency,
@@ -6,11 +5,11 @@ use crate::sources::{
 };
 use reqwest::Client;
 use std::collections::HashMap;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
 use strum::IntoEnumIterator;
 use tokio::sync::mpsc;
 
-pub async fn collect_all(client: &Client) -> HashMap<Source, Result<Vec<Rate>, Error>> {
+pub async fn collect_all(client: &Client) -> HashMap<Source, anyhow::Result<Vec<Rate>>> {
     let mut results = HashMap::new();
     let (tx, mut rx) = mpsc::channel(Source::iter().count());
     for source in Source::iter() {
@@ -29,7 +28,7 @@ pub async fn collect_all(client: &Client) -> HashMap<Source, Result<Vec<Rate>, E
 }
 
 pub fn filter_collection(
-    results: HashMap<Source, Result<Vec<Rate>, Error>>,
+    results: HashMap<Source, anyhow::Result<Vec<Rate>>>,
 ) -> HashMap<Source, Vec<Rate>> {
     let mut rates = HashMap::new();
     for (source, result) in results {
@@ -47,7 +46,7 @@ pub fn filter_collection(
     rates
 }
 
-async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
+async fn collect(client: &Client, source: Source) -> anyhow::Result<Vec<Rate>> {
     let rates = match source {
         Source::Acba => collect_acba(&client).await?,
         Source::Ameria => collect_ameria(&client).await?,
@@ -76,33 +75,19 @@ async fn collect(client: &Client, source: Source) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    Sources(sources::Error),
+    #[error("no rates found")]
     NoRates,
 }
 
-impl From<sources::Error> for Error {
-    fn from(err: sources::Error) -> Self {
-        Self::Sources(err)
-    }
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl std::error::Error for Error {}
-
-async fn collect_acba(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_acba(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: acba::Response = acba::Response::get_rates(&client).await?;
     let rates = parse_acba(resp)?;
     Ok(rates)
 }
 
-pub(crate) fn parse_acba(resp: acba::Response) -> Result<Vec<Rate>, Error> {
+pub(crate) fn parse_acba(resp: acba::Response) -> anyhow::Result<Vec<Rate>> {
     let result = resp.result.ok_or(Error::NoRates)?;
     let mut results = vec![];
     for (rate_type, rates) in [
@@ -137,7 +122,7 @@ pub(crate) fn parse_acba(resp: acba::Response) -> Result<Vec<Rate>, Error> {
     Ok(results)
 }
 
-async fn collect_ameria(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_ameria(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
         let resp: armsoft::Response = ameria::Response::get_rates(&client, rate_type).await?;
@@ -160,7 +145,7 @@ fn collect_armsoft(resp: armsoft::Response, rate_type: RateType) -> Vec<Rate> {
         .collect()
 }
 
-async fn collect_ardshin(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_ardshin(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: ardshin::Response = ardshin::Response::get_rates(&client).await?;
     let mut results = vec![];
     for (rate_type, rates) in [
@@ -182,7 +167,7 @@ async fn collect_ardshin(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(results)
 }
 
-async fn collect_arm_swiss(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_arm_swiss(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: arm_swiss::Response = arm_swiss::Response::get_rates(&client).await?;
     let lmasbrate = resp.lmasbrate.ok_or(Error::NoRates)?;
     let mut rates = vec![];
@@ -205,7 +190,7 @@ async fn collect_arm_swiss(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_cb_am(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_cb_am(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp = cb_am::Response::get_rates(&client).await?;
     let rates = resp
         .soap_body
@@ -225,7 +210,7 @@ async fn collect_cb_am(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_evoca(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_evoca(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
         let resp: armsoft::Response = evoca::Response::get_rates(&client, rate_type).await?;
@@ -235,7 +220,7 @@ async fn collect_evoca(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(results)
 }
 
-async fn collect_fast(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_fast(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
         let resp: fast::Response = fast::Response::get_rates(&client, rate_type).await?;
@@ -255,10 +240,10 @@ async fn collect_fast(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(results)
 }
 
-async fn collect_ineco(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_ineco(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: ineco::Response = ineco::Response::get_rates(&client).await?;
     if !resp.success {
-        return Err(Error::NoRates);
+        Err(Error::NoRates)?;
     }
     let items = resp.items.ok_or(Error::NoRates)?;
     let mut rates = vec![];
@@ -285,7 +270,7 @@ async fn collect_ineco(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_mellat(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_mellat(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: mellat::Response = mellat::Response::get_rates(&client).await?;
     let result = resp.result.ok_or(Error::NoRates)?;
     let mut rates = vec![];
@@ -308,7 +293,7 @@ async fn collect_mellat(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_converse(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_converse(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: converse::Response = converse::Response::get_rates(&client).await?;
     let mut results = vec![];
     for (rate_type, rates) in [
@@ -330,7 +315,7 @@ async fn collect_converse(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(results)
 }
 
-async fn collect_aeb(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_aeb(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: aeb::Response = aeb::Response::get_rates(&client).await?;
     let mut rates = vec![];
     for item in resp.rate_currency_settings {
@@ -351,7 +336,7 @@ async fn collect_aeb(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_vtb_am(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_vtb_am(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: vtb_am::Response = vtb_am::Response::get_rates(&client).await?;
     let rates = resp
         .items
@@ -370,19 +355,19 @@ async fn collect_vtb_am(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_artsakh(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_artsakh(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: lsoft::Response = artsakh::Response::get_rates(&client).await?;
     let rates = collect_lsoft(resp)?;
     Ok(rates)
 }
 
-async fn collect_unibank(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_unibank(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: lsoft::Response = unibank::Response::get_rates(&client).await?;
     let rates = collect_lsoft(resp)?;
     Ok(rates)
 }
 
-fn collect_lsoft(resp: lsoft::Response) -> Result<Vec<Rate>, Error> {
+fn collect_lsoft(resp: lsoft::Response) -> anyhow::Result<Vec<Rate>> {
     let items = resp.get_currency_list.currency_list.ok_or(Error::NoRates)?;
     let mut rates = vec![];
     for item in items {
@@ -408,7 +393,7 @@ fn collect_lsoft(resp: lsoft::Response) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_amio(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_amio(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
         let resp: armsoft::Response = amio::Response::get_rates(&client, rate_type).await?;
@@ -418,7 +403,7 @@ async fn collect_amio(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(results)
 }
 
-async fn collect_byblos(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_byblos(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
         let resp: armsoft::Response = byblos::Response::get_rates(&client, rate_type).await?;
@@ -428,7 +413,7 @@ async fn collect_byblos(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(results)
 }
 
-async fn collect_idbank(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_idbank(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: idbank::Response = idbank::Response::get_rates(&client).await?;
     let result = resp.result.ok_or(Error::NoRates)?;
     let mut rates = vec![];
@@ -455,7 +440,7 @@ async fn collect_idbank(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_moex(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_moex(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: moex::Response = moex::Response::get_rates(&client).await?;
     const BOARD_ID: &str = "CETS";
     let facevalue = resp
@@ -474,7 +459,7 @@ async fn collect_moex(client: &Client) -> Result<Vec<Rate>, Error> {
         .filter_map(|v| v.1)
         .next();
     let Some(last) = last else {
-        return Err(Error::NoRates);
+        Err(Error::NoRates)?
     };
     let mut rates = vec![];
     if last == 0.0 {
@@ -491,7 +476,7 @@ async fn collect_moex(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_ararat(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_ararat(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
         let resp: armsoft::Response = ararat::Response::get_rates(&client, rate_type).await?;
@@ -501,7 +486,7 @@ async fn collect_ararat(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(results)
 }
 
-async fn collect_idpay(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_idpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: idbank::Response = idbank::Response::get_rates(&client).await?;
     let result = resp.result.ok_or(Error::NoRates)?;
     const COMMISSION_RATE: f64 = 0.9;
@@ -525,7 +510,7 @@ async fn collect_idpay(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_mir(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_mir(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: mir::Response = mir::Response::get_rates(&client).await?;
     let rates = resp
         .content
@@ -556,7 +541,7 @@ async fn collect_mir(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_sas(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_sas(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: sas::Response = sas::Response::get_rates(&client).await?;
     let rates = resp
         .rates
@@ -567,7 +552,7 @@ async fn collect_sas(client: &Client) -> Result<Vec<Rate>, Error> {
     Ok(rates)
 }
 
-async fn collect_hsbc(client: &Client) -> Result<Vec<Rate>, Error> {
+async fn collect_hsbc(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: hsbc::Response = hsbc::Response::get_rates(&client).await?;
     let rates = resp
         .rates
@@ -592,77 +577,77 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_collect_acba() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_acba() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Acba).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_ameria() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_ameria() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Ameria).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_ardshin() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_ardshin() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Ardshin).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_arm_swiss() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_arm_swiss() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::ArmSwiss).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_cb_am() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_cb_am() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::CbAm).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_evoca() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_evoca() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Evoca).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_fast() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_fast() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Fast).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_ineco() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_ineco() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Ineco).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_mellat() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_mellat() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Mellat).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_converse() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_converse() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Converse).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_aeb() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_aeb() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::AEB).await?;
         Ok(())
@@ -670,70 +655,70 @@ mod tests {
 
     #[ignore]
     #[tokio::test]
-    async fn test_collect_vtb_am() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_vtb_am() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::VtbAm).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_artsakh() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_artsakh() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Artsakh).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_unibank() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_unibank() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::UniBank).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_amio() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_amio() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Amio).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_byblos() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_byblos() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Byblos).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_idbank() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_idbank() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::IdBank).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_moex() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_moex() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::MoEx).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_ararat() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_ararat() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Ararat).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_idpay() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_idpay() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::IdPay).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_mir() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_mir() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Mir).await?;
         Ok(())
@@ -741,14 +726,14 @@ mod tests {
 
     #[ignore]
     #[tokio::test]
-    async fn test_collect_sas() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_sas() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Sas).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_collect_hsbc() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_collect_hsbc() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Hsbc).await?;
         Ok(())

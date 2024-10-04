@@ -1,5 +1,5 @@
 use crate::sources::utils::{de_currency, de_option_f64};
-use crate::sources::{Currency, Error};
+use crate::sources::Currency;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
@@ -16,7 +16,7 @@ pub const APHENA: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 pub trait SourceAphenaTrait {
     fn url() -> String;
 
-    async fn get_rates<T>(c: &reqwest::Client) -> Result<T, Error>
+    async fn get_rates<T>(c: &reqwest::Client) -> anyhow::Result<T>
     where
         T: DeserializeOwned,
     {

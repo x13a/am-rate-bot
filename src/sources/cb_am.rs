@@ -1,6 +1,5 @@
 use crate::sources::utils::de_currency;
 use crate::sources::Currency;
-use crate::sources::Error;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://api.cba.am/exchangerates.asmx";
@@ -74,7 +73,7 @@ impl Response {
         API_URL.into()
     }
 
-    pub async fn get_rates(c: &reqwest::Client) -> Result<Self, Error> {
+    pub async fn get_rates(c: &reqwest::Client) -> anyhow::Result<Self> {
         let body = c
             .post(Self::url())
             .header(

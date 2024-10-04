@@ -1,5 +1,5 @@
 use crate::sources::utils::{de_currency, de_option_f64};
-use crate::sources::{Currency, Error, SourceSingleUrlTrait};
+use crate::sources::{Currency, SourceSingleUrlTrait};
 use reqwest::Client;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -66,7 +66,7 @@ impl SourceSingleUrlTrait for Response {
         API_URL.into()
     }
 
-    async fn get_rates<T>(c: &Client) -> std::result::Result<T, Error>
+    async fn get_rates<T>(c: &Client) -> anyhow::Result<T>
     where
         T: DeserializeOwned,
     {

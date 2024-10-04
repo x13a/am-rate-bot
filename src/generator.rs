@@ -418,7 +418,7 @@ mod tests {
     }
 
     #[test]
-    fn test_graph() -> Result<(), Box<dyn std::error::Error>> {
+    fn test_graph() -> anyhow::Result<()> {
         let acba: acba::Response = serde_json::from_str(ACBA_DATA)?;
         let rates = parse_acba(acba)?;
         let graph = build_graph(&rates, RateType::NoCash);
@@ -431,7 +431,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_generate_table() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_generate_table() -> anyhow::Result<()> {
         let client = build_client()?;
         let results = collect_all(&client).await;
         let rates = filter_collection(results);

@@ -1,5 +1,6 @@
-use crate::sources::utils::{de_currency, de_f64};
+use crate::sources::utils::de_currency;
 use crate::sources::{Currency as SourcesCurrency, SourceSingleUrlTrait};
+use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://www.acbadigital.am/api/en/v2/rates";
@@ -38,10 +39,8 @@ pub struct Rates {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Rate {
-    #[serde(deserialize_with = "de_f64")]
-    pub buy: f64,
-    #[serde(deserialize_with = "de_f64")]
-    pub sell: f64,
+    pub buy: Decimal,
+    pub sell: Decimal,
     #[serde(rename = "CB")]
     pub cb: String,
     #[serde(deserialize_with = "de_currency")]
@@ -51,10 +50,8 @@ pub struct Rate {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct CrossRate {
-    #[serde(deserialize_with = "de_f64")]
-    pub buy: f64,
-    #[serde(deserialize_with = "de_f64")]
-    pub sell: f64,
+    pub buy: Decimal,
+    pub sell: Decimal,
     pub currency: String,
 }
 

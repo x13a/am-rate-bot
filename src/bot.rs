@@ -238,8 +238,8 @@ async fn command(
         | Command::FromToCash { ref from, ref to }
         | Command::FromToCashInv { ref from, ref to } => {
             exchange_repl(
-                Currency::from(from),
-                Currency::from(to),
+                Currency::new(from),
+                Currency::new(to),
                 match cmd {
                     Command::FromToCash { .. } | Command::FromToCashInv { .. } => RateType::Cash,
                     _ => RateType::NoCash,

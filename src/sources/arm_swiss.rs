@@ -1,5 +1,6 @@
-use crate::sources::utils::{de_currency, de_f64};
+use crate::sources::utils::de_currency;
 use crate::sources::{Currency, SourceSingleUrlTrait};
+use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://www.armswissbank.am/include/ajax.php";
@@ -34,16 +35,16 @@ pub struct LmasbRate {
     pub iso: Currency,
     #[serde(rename = "CURRENCY")]
     pub currency: String,
-    #[serde(rename = "BID", deserialize_with = "de_f64")]
-    pub bid: f64,
-    #[serde(rename = "OFFER", deserialize_with = "de_f64")]
-    pub offer: f64,
+    #[serde(rename = "BID")]
+    pub bid: Decimal,
+    #[serde(rename = "OFFER")]
+    pub offer: Decimal,
     pub inserttime: String,
     pub hert: String,
-    #[serde(rename = "BID_cash", deserialize_with = "de_f64")]
-    pub bid_cash: f64,
-    #[serde(rename = "OFFER_cash", deserialize_with = "de_f64")]
-    pub offer_cash: f64,
+    #[serde(rename = "BID_cash")]
+    pub bid_cash: Decimal,
+    #[serde(rename = "OFFER_cash")]
+    pub offer_cash: Decimal,
 }
 
 #[derive(Debug, Deserialize)]

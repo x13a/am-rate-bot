@@ -1,5 +1,7 @@
 use crate::sources::utils::de_currency;
 use crate::sources::{Currency as SourcesCurrency, SourceSingleUrlTrait};
+use rust_decimal::serde::arbitrary_precision;
+use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://api-user.vamprivet.ru/backend/api/v2/currencies/rates";
@@ -21,8 +23,10 @@ pub struct Content {
     pub buysell_timestamp: String,
     pub currency: Currency,
     pub value_base: Option<f64>,
-    pub value_buy: f64,
-    pub value_sell: f64,
+    #[serde(deserialize_with = "arbitrary_precision::deserialize")]
+    pub value_buy: Decimal,
+    #[serde(deserialize_with = "arbitrary_precision::deserialize")]
+    pub value_sell: Decimal,
     pub value_middle: f64,
     pub created: String,
     pub updated: Option<String>,

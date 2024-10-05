@@ -1,5 +1,6 @@
-use crate::sources::utils::{de_currency, de_option_f64};
+use crate::sources::utils::{de_currency, de_empty_decimal};
 use crate::sources::Currency;
+use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
@@ -58,16 +59,16 @@ pub struct CurrencyList {
     #[serde(rename = "externalId", deserialize_with = "de_currency")]
     pub external_id: Currency,
     pub cb: f64,
-    #[serde(deserialize_with = "de_option_f64")]
-    pub sell: Option<f64>,
-    #[serde(deserialize_with = "de_option_f64")]
-    pub buy: Option<f64>,
+    #[serde(deserialize_with = "de_empty_decimal")]
+    pub sell: Option<Decimal>,
+    #[serde(deserialize_with = "de_empty_decimal")]
+    pub buy: Option<Decimal>,
     pub trf30: Trf30,
     pub trf31: Trf31,
-    #[serde(rename = "CshSell", deserialize_with = "de_option_f64")]
-    pub csh_sell: Option<f64>,
-    #[serde(rename = "CshBuy", deserialize_with = "de_option_f64")]
-    pub csh_buy: Option<f64>,
+    #[serde(rename = "CshSell", deserialize_with = "de_empty_decimal")]
+    pub csh_sell: Option<Decimal>,
+    #[serde(rename = "CshBuy", deserialize_with = "de_empty_decimal")]
+    pub csh_buy: Option<Decimal>,
 }
 
 #[derive(Debug, Deserialize)]

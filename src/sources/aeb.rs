@@ -1,5 +1,7 @@
 use crate::sources::utils::{de_currency, de_rate_type};
 use crate::sources::{Currency, RateType, SourceSingleUrlTrait};
+use rust_decimal::serde::arbitrary_precision_option;
+use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://mobile.aeb.am/mobile-proxy-exchange-rates/rate-settings";
@@ -29,8 +31,10 @@ pub struct Item {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Rate {
-    pub buy_rate: Option<f64>,
-    pub sell_rate: Option<f64>,
+    #[serde(deserialize_with = "arbitrary_precision_option::deserialize")]
+    pub buy_rate: Option<Decimal>,
+    #[serde(deserialize_with = "arbitrary_precision_option::deserialize")]
+    pub sell_rate: Option<Decimal>,
     #[serde(rename = "type", deserialize_with = "de_rate_type")]
     pub rate_type: RateType,
 }

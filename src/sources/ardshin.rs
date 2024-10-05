@@ -1,5 +1,6 @@
-use crate::sources::utils::{de_currency, de_f64};
+use crate::sources::utils::de_currency;
 use crate::sources::{Currency as SourcesCurrency, SourceSingleUrlTrait};
+use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://website-api.ardshinbank.am/currency";
@@ -39,10 +40,8 @@ pub struct Gold {
 pub struct Currency {
     #[serde(rename = "type", deserialize_with = "de_currency")]
     pub curr_type: SourcesCurrency,
-    #[serde(deserialize_with = "de_f64")]
-    pub buy: f64,
-    #[serde(deserialize_with = "de_f64")]
-    pub sell: f64,
+    pub buy: Decimal,
+    pub sell: Decimal,
     pub cb: String,
 }
 

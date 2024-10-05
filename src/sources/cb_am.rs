@@ -1,5 +1,6 @@
-use crate::sources::utils::de_currency;
+use crate::sources::utils::{de_currency, de_decimal};
 use crate::sources::Currency;
+use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://api.cba.am/exchangerates.asmx";
@@ -64,8 +65,9 @@ pub struct ExchangeRate {
     #[serde(rename = "ISO", deserialize_with = "de_currency")]
     pub iso: Currency,
     pub amount: u32,
-    pub rate: f64,
-    pub difference: f64,
+    #[serde(deserialize_with = "de_decimal")]
+    pub rate: Decimal,
+    pub difference: String,
 }
 
 impl Response {

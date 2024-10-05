@@ -1,5 +1,7 @@
 use crate::sources::utils::de_currency;
 use crate::sources::{Currency, SourceSingleUrlTrait};
+use rust_decimal::serde::arbitrary_precision;
+use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://online.vtb.am/dbo/api/v1/currencies/rates";
@@ -50,8 +52,10 @@ pub struct BaseTarget {
 #[derive(Debug, Deserialize)]
 pub struct BuySell {
     pub close: f64,
-    pub max: f64,
-    pub min: f64,
+    #[serde(deserialize_with = "arbitrary_precision::deserialize")]
+    pub max: Decimal,
+    #[serde(deserialize_with = "arbitrary_precision::deserialize")]
+    pub min: Decimal,
     pub open: f64,
     pub trend: String,
 }

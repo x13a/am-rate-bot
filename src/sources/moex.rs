@@ -1,4 +1,6 @@
 use crate::sources::SourceSingleUrlTrait;
+use rust_decimal::serde::{arbitrary_precision, arbitrary_precision_option};
+use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://iss.moex.com/iss/engines/currency/markets/selt/boards/CETS/securities/AMDRUB_TOM.json?iss.meta=off&marketdata.columns=BOARDID,LAST,VALTODAY_USD&securities.columns=BOARDID,FACEVALUE&iss.clear_cache=1&iss.json=compact";
@@ -27,7 +29,11 @@ pub struct MarketData {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct MarketDataData(pub String, pub Option<f64>, pub Option<i64>);
+pub struct MarketDataData(
+    pub String,
+    #[serde(deserialize_with = "arbitrary_precision_option::deserialize")] pub Option<Decimal>,
+    pub Option<i64>,
+);
 
 #[derive(Debug, Deserialize)]
 pub struct MarketDataYields {
@@ -45,7 +51,10 @@ pub struct Securities {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SecuritiesData(pub String, pub f64);
+pub struct SecuritiesData(
+    pub String,
+    #[serde(deserialize_with = "arbitrary_precision::deserialize")] pub Decimal,
+);
 
 impl SourceSingleUrlTrait for Response {
     fn url() -> String {

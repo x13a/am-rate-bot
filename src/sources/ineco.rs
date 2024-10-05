@@ -1,5 +1,7 @@
 use crate::sources::utils::de_currency;
 use crate::sources::{Currency, SourceSingleUrlTrait};
+use rust_decimal::serde::arbitrary_precision_option;
+use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://www.inecobank.am/api/rates";
@@ -30,6 +32,8 @@ pub struct Item {
 
 #[derive(Debug, Deserialize)]
 pub struct Rate {
-    pub buy: Option<f64>,
-    pub sell: Option<f64>,
+    #[serde(deserialize_with = "arbitrary_precision_option::deserialize")]
+    pub buy: Option<Decimal>,
+    #[serde(deserialize_with = "arbitrary_precision_option::deserialize")]
+    pub sell: Option<Decimal>,
 }

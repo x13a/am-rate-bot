@@ -1,25 +1,14 @@
 use crate::sources::{Currency, RateType};
+use rust_decimal::Decimal;
 use serde::{de, Deserialize, Deserializer};
 use std::str::FromStr;
-
-pub(crate) fn de_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let mut s = String::deserialize(deserializer)?;
-    for c in [",", "%"] {
-        s = s.replace(c, "");
-    }
-    let f = s.parse::<f64>().map_err(de::Error::custom)?;
-    Ok(f)
-}
 
 pub(crate) fn de_currency<'de, D>(deserializer: D) -> Result<Currency, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    Ok(Currency::from(&s))
+    Ok(Currency::new(s))
 }
 
 pub(crate) fn de_rate_type<'de, D>(deserializer: D) -> Result<RateType, D::Error>
@@ -31,7 +20,7 @@ where
     Ok(v)
 }
 
-pub(crate) fn de_option_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+pub(crate) fn de_empty_decimal<'de, D>(deserializer: D) -> Result<Option<Decimal>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -39,6 +28,15 @@ where
     if s.is_empty() {
         return Ok(None);
     }
-    let f = s.parse::<f64>().map_err(de::Error::custom)?;
+    let f = Decimal::from_str(&s).map_err(de::Error::custom)?;
     Ok(Some(f))
+}
+
+pub(crate) fn de_decimal<'de, D>(deserializer: D) -> Result<Decimal, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    let f = Decimal::from_str(&s).map_err(de::Error::custom)?;
+    Ok(f)
 }

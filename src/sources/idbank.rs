@@ -1,6 +1,7 @@
-use crate::sources::utils::{de_currency, de_option_f64};
+use crate::sources::utils::{de_currency, de_empty_decimal};
 use crate::sources::{Currency, SourceSingleUrlTrait};
 use reqwest::Client;
+use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
@@ -25,28 +26,28 @@ pub struct Result {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct CurrencyRate {
-    #[serde(deserialize_with = "de_option_f64")]
-    pub buy: Option<f64>,
+    #[serde(deserialize_with = "de_empty_decimal")]
+    pub buy: Option<Decimal>,
     pub cards_buy: String,
     pub cards_sell: String,
     pub cb: String,
     pub country: String,
-    #[serde(deserialize_with = "de_option_f64")]
-    pub csh_buy: Option<f64>,
-    #[serde(deserialize_with = "de_option_f64")]
-    pub csh_buy_trf: Option<f64>,
-    #[serde(deserialize_with = "de_option_f64")]
-    pub csh_sell: Option<f64>,
-    #[serde(deserialize_with = "de_option_f64")]
-    pub csh_sell_trf: Option<f64>,
+    #[serde(deserialize_with = "de_empty_decimal")]
+    pub csh_buy: Option<Decimal>,
+    #[serde(deserialize_with = "de_empty_decimal")]
+    pub csh_buy_trf: Option<Decimal>,
+    #[serde(deserialize_with = "de_empty_decimal")]
+    pub csh_sell: Option<Decimal>,
+    #[serde(deserialize_with = "de_empty_decimal")]
+    pub csh_sell_trf: Option<Decimal>,
     pub external_id: String,
     pub iso_code: String,
     #[serde(deserialize_with = "de_currency")]
     pub iso_txt: Currency,
     pub loan: String,
     pub name: Name,
-    #[serde(deserialize_with = "de_option_f64")]
-    pub sell: Option<f64>,
+    #[serde(deserialize_with = "de_empty_decimal")]
+    pub sell: Option<Decimal>,
 }
 
 #[derive(Debug, Deserialize)]

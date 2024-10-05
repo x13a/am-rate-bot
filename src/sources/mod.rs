@@ -1,6 +1,7 @@
 pub use lsoft::SourceAphenaTrait;
+use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
 use std::str::FromStr;
 use strum::EnumIter;
 
@@ -107,7 +108,7 @@ impl Source {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Eq, Hash)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash, derive_more::Display)]
 pub struct Currency(String);
 
 impl Currency {
@@ -115,6 +116,10 @@ impl Currency {
     pub const USD: &'static str = "USD";
     pub const EUR: &'static str = "EUR";
     pub const RUB: &'static str = "RUB";
+
+    pub fn new<T: AsRef<str>>(s: T) -> Self {
+        Self(s.as_ref().trim().to_uppercase().replace("RUR", Self::RUB))
+    }
 
     pub fn usd() -> Self {
         Self(Self::USD.into())
@@ -126,21 +131,6 @@ impl Currency {
 
     pub fn rub() -> Self {
         Self(Self::RUB.into())
-    }
-}
-
-impl<S> From<S> for Currency
-where
-    S: AsRef<str>,
-{
-    fn from(s: S) -> Self {
-        Self(s.as_ref().trim().to_uppercase().replace("RUR", Self::RUB))
-    }
-}
-
-impl Display for Currency {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 
@@ -163,7 +153,7 @@ impl FromStr for RateType {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let rt = match s.to_uppercase().as_str() {
+        let v = match s.to_uppercase().as_str() {
             "NO CASH" | "NON CASH" | "NO_CASH" | "NON_CASH" => Self::NoCash,
             "CASH" => Self::Cash,
             "CARD" => Self::Card,
@@ -171,7 +161,7 @@ impl FromStr for RateType {
             "CB" => Self::CB,
             _ => return Err(Error::InvalidRateType),
         };
-        Ok(rt)
+        Ok(v)
     }
 }
 
@@ -188,8 +178,8 @@ pub struct Rate {
     pub from: Currency,
     pub to: Currency,
     pub rate_type: RateType,
-    pub buy: Option<f64>,
-    pub sell: Option<f64>,
+    pub buy: Option<Decimal>,
+    pub sell: Option<Decimal>,
 }
 
 #[cfg(test)]

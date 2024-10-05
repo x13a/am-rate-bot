@@ -28,7 +28,7 @@ impl Response {
             let buy = cells.next().ok_or(Error::Html)?.text();
             let sell = cells.next().ok_or(Error::Html)?.text();
             let rate = Rate {
-                from: Currency::from(currency),
+                from: Currency::new(currency),
                 to: Currency::default(),
                 rate_type: RateType::Cash,
                 buy: buy.trim().parse().ok(),

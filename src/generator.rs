@@ -1,17 +1,19 @@
 use crate::sources::{Currency, Rate, RateType, Source};
 use crate::DUNNO;
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 #[derive(Debug)]
 struct Edge {
     to: Currency,
-    rate: f64,
+    rate: Decimal,
 }
 
 fn build_graph(rates: &[Rate], rate_type: RateType) -> HashMap<Currency, Vec<Edge>> {
     let mut graph: HashMap<Currency, Vec<Edge>> = HashMap::new();
-    let mut add_edge = |from: Currency, to: Currency, rate: f64| {
+    let mut add_edge = |from: Currency, to: Currency, rate: Decimal| {
         graph.entry(from).or_default().push(Edge { to, rate });
     };
     for rate in rates
@@ -19,13 +21,13 @@ fn build_graph(rates: &[Rate], rate_type: RateType) -> HashMap<Currency, Vec<Edg
         .filter(|r| [rate_type, RateType::CB].contains(&r.rate_type) && r.from != r.to)
     {
         if let Some(buy) = rate.buy {
-            if buy > 0.0 {
+            if buy > dec!(0.0) {
                 add_edge(rate.from.clone(), rate.to.clone(), buy);
             }
         }
         if let Some(sell) = rate.sell {
-            if sell > 0.0 {
-                add_edge(rate.to.clone(), rate.from.clone(), 1.0 / sell);
+            if sell > dec!(0.0) {
+                add_edge(rate.to.clone(), rate.from.clone(), dec!(1.0) / sell);
             }
         }
     }
@@ -36,12 +38,20 @@ fn find_all_paths(
     graph: &HashMap<Currency, Vec<Edge>>,
     from: Currency,
     to: Currency,
-) -> Vec<(Vec<Currency>, f64)> {
+) -> Vec<(Vec<Currency>, Decimal)> {
     assert_ne!(from, to);
     let mut paths = Vec::new();
     let mut path = Vec::new();
     let mut visited = HashSet::new();
-    dfs(graph, from, to, &mut visited, &mut path, &mut paths, 1.0);
+    dfs(
+        graph,
+        from,
+        to,
+        &mut visited,
+        &mut path,
+        &mut paths,
+        dec!(1.0),
+    );
     paths
 }
 
@@ -51,8 +61,8 @@ fn dfs(
     to: Currency,
     visited: &mut HashSet<Currency>,
     path: &mut Vec<Currency>,
-    paths: &mut Vec<(Vec<Currency>, f64)>,
-    cumulative_rate: f64,
+    paths: &mut Vec<(Vec<Currency>, Decimal)>,
+    cumulative_rate: Decimal,
 ) {
     visited.insert(from.clone());
     path.push(from.clone());
@@ -94,9 +104,9 @@ pub fn generate_table(
     #[derive(Debug)]
     struct Row {
         source: Source,
-        rate: f64,
+        rate: Decimal,
         rate_str: String,
-        diff: f64,
+        diff: Decimal,
         diff_str: String,
         path: Vec<Currency>,
     }
@@ -105,15 +115,15 @@ pub fn generate_table(
     let mut source_width: usize = 0;
     let mut rate_width: usize = 0;
     let sort = if is_inv {
-        |a: f64, b: f64| a.partial_cmp(&b).expect("panic")
+        |a: Decimal, b: Decimal| a.partial_cmp(&b).expect("panic")
     } else {
-        |a: f64, b: f64| b.partial_cmp(&a).expect("panic")
+        |a: Decimal, b: Decimal| b.partial_cmp(&a).expect("panic")
     };
     for (source, rates) in rates {
         let graph = build_graph(&rates, rate_type);
         let mut paths = find_all_paths(&graph, from.clone(), to.clone());
         if is_inv {
-            paths.iter_mut().for_each(|v| v.1 = 1.0 / v.1);
+            paths.iter_mut().for_each(|v| v.1 = dec!(1.0) / v.1);
         }
         paths.sort_by(|a, b| sort(a.1, b.1));
         let max_len = paths.iter().map(|v| v.0.len()).max().unwrap_or(3);
@@ -125,14 +135,14 @@ pub fn generate_table(
             }
         }
         source_width = source_width.max(source.to_string().len());
-        for (path, rate) in paths.iter().filter(|v| v.1 > 0.0) {
+        for (path, rate) in paths.iter().filter(|v| v.1 > dec!(0.0)) {
             let rate_str = format!("{:.4}", rate);
             rate_width = rate_width.max(rate_str.len());
             table.push(Row {
                 source: source.clone(),
                 rate: *rate,
                 rate_str,
-                diff: 0.0,
+                diff: dec!(0.0),
                 diff_str: "".into(),
                 path: path.clone(),
             });
@@ -154,7 +164,7 @@ pub fn generate_table(
         .unwrap_or_default();
     let mut diff_width: usize = 0;
     let mut is_desc = false;
-    let mut rate = 0.0;
+    let mut rate = dec!(0.0);
     for (idx, row) in table.iter().enumerate() {
         if idx == 0 {
             rate = row.rate;
@@ -168,8 +178,8 @@ pub fn generate_table(
         }
     }
     table.iter_mut().for_each(|row| {
-        row.diff = ((best_rate - row.rate) / row.rate) * 100.0;
-        if is_desc && row.diff != 0.0 {
+        row.diff = ((best_rate - row.rate) / row.rate) * dec!(100.0);
+        if is_desc && row.diff != dec!(0.0) {
             row.diff = -row.diff;
         }
         row.diff_str = format!("{:.2}", row.diff);

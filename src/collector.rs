@@ -4,6 +4,8 @@ use crate::sources::{
     Rate, RateType, Source, SourceAphenaTrait, SourceCashUrlTrait, SourceSingleUrlTrait,
 };
 use reqwest::Client;
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use strum::IntoEnumIterator;
@@ -112,8 +114,8 @@ pub(crate) fn parse_acba(resp: acba::Response) -> anyhow::Result<Vec<Rate>> {
             continue;
         };
         results.push(Rate {
-            from: Currency::from(from),
-            to: Currency::from(to),
+            from: Currency::new(from),
+            to: Currency::new(to),
             rate_type: RateType::NoCash,
             buy: Some(rate.buy),
             sell: Some(rate.sell),
@@ -349,7 +351,7 @@ async fn collect_vtb_am(client: &Client) -> anyhow::Result<Vec<Rate>> {
             to: v.target.currency.clone(),
             rate_type: RateType::NoCash,
             buy: v.sell.as_ref().map(|v| v.min),
-            sell: v.buy.as_ref().map(|v| v.min),
+            sell: v.buy.as_ref().map(|v| v.max),
         })
         .collect();
     Ok(rates)
@@ -450,7 +452,7 @@ async fn collect_moex(client: &Client) -> anyhow::Result<Vec<Rate>> {
         .filter(|v| v.0 == BOARD_ID)
         .map(|v| v.1)
         .next()
-        .unwrap_or(100.0);
+        .unwrap_or(dec!(100.0));
     let last = resp
         .marketdata
         .data
@@ -462,7 +464,7 @@ async fn collect_moex(client: &Client) -> anyhow::Result<Vec<Rate>> {
         Err(Error::NoRates)?
     };
     let mut rates = vec![];
-    if last == 0.0 {
+    if last == dec!(0.0) {
         return Ok(rates);
     }
     let rate = facevalue / last;
@@ -489,8 +491,8 @@ async fn collect_ararat(client: &Client) -> anyhow::Result<Vec<Rate>> {
 async fn collect_idpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: idbank::Response = idbank::Response::get_rates(&client).await?;
     let result = resp.result.ok_or(Error::NoRates)?;
-    const COMMISSION_RATE: f64 = 0.9;
-    const RU_CARD_COMMISSION_RATE: f64 = 0.3;
+    const COMMISSION_RATE: Decimal = dec!(0.9);
+    const RU_CARD_COMMISSION_RATE: Decimal = dec!(0.3);
     let rates = result
         .currency_rate
         .iter()
@@ -502,8 +504,10 @@ async fn collect_idpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
                 from: v.iso_txt.clone(),
                 to: Currency::default(),
                 rate_type: RateType::NoCash,
-                buy: Some(buy - (COMMISSION_RATE / 100.0 * buy)),
-                sell: Some(sell + ((COMMISSION_RATE + RU_CARD_COMMISSION_RATE) / 100.0 * sell)),
+                buy: Some(buy - (COMMISSION_RATE / dec!(100.0) * buy)),
+                sell: Some(
+                    sell + ((COMMISSION_RATE + RU_CARD_COMMISSION_RATE) / dec!(100.0) * sell),
+                ),
             }
         })
         .collect();
@@ -517,8 +521,8 @@ async fn collect_mir(client: &Client) -> anyhow::Result<Vec<Rate>> {
         .iter()
         .filter(|v| v.currency.strcode == Currency::default())
         .map(|v| {
-            let buy = Some(1.0 / v.value_sell);
-            let sell = Some(1.0 / v.value_buy);
+            let buy = Some(dec!(1.0) / v.value_sell);
+            let sell = Some(dec!(1.0) / v.value_buy);
             [
                 Rate {
                     from: Currency::rub(),

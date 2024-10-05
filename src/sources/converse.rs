@@ -1,5 +1,7 @@
 use crate::sources::utils::de_currency;
 use crate::sources::{Currency as SourceCurrency, SourceSingleUrlTrait};
+use rust_decimal::serde::arbitrary_precision;
+use rust_decimal::Decimal;
 use serde::{de, Deserialize, Deserializer};
 use serde_json::Value;
 
@@ -25,9 +27,11 @@ pub struct Response {
 
 #[derive(Debug, Deserialize)]
 pub struct Item {
-    pub buy: f64,
+    #[serde(deserialize_with = "arbitrary_precision::deserialize")]
+    pub buy: Decimal,
     pub buy_diff: f64,
-    pub sell: f64,
+    #[serde(deserialize_with = "arbitrary_precision::deserialize")]
+    pub sell: Decimal,
     pub sell_diff: f64,
     pub rate_date: String,
     #[serde(rename = "type")]
@@ -59,10 +63,10 @@ fn de_i32<'de, D>(deserializer: D) -> Result<i32, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let rv = match Value::deserialize(deserializer)? {
+    let i = match Value::deserialize(deserializer)? {
         Value::String(s) => s.parse().map_err(de::Error::custom)?,
-        Value::Number(n) => n.as_i64().ok_or(de::Error::custom(""))? as i32,
+        Value::Number(n) => n.as_i64().ok_or(de::Error::custom("invalid number"))? as i32,
         _ => return Err(de::Error::custom("")),
     };
-    Ok(rv)
+    Ok(i)
 }

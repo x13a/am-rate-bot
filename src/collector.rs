@@ -14,12 +14,12 @@ use tokio::sync::mpsc;
 pub async fn collect_all(client: &Client) -> HashMap<Source, anyhow::Result<Vec<Rate>>> {
     let mut results = HashMap::new();
     let (tx, mut rx) = mpsc::channel(Source::iter().count());
-    for source in Source::iter() {
+    for src in Source::iter() {
         let client = client.clone();
         let tx = tx.clone();
         tokio::spawn(async move {
-            let result = collect(&client, source).await;
-            tx.send((source, result)).await.expect("panic");
+            let result = collect(&client, src).await;
+            tx.send((src, result)).await.expect("panic");
         });
     }
     drop(tx);
@@ -33,23 +33,23 @@ pub fn filter_collection(
     results: HashMap<Source, anyhow::Result<Vec<Rate>>>,
 ) -> HashMap<Source, Vec<Rate>> {
     let mut rates = HashMap::new();
-    for (source, result) in results {
+    for (src, result) in results {
         match result {
             Ok(v) => {
                 if v.is_empty() {
-                    log::warn!("no rate found, source: {}", source);
+                    log::warn!("no rate found, source: {}", src);
                     continue;
                 }
-                rates.insert(source, v);
+                rates.insert(src, v);
             }
-            Err(err) => log::error!("failed to get rate: {err}, source: {}", source),
+            Err(err) => log::error!("failed to get rate: {err}, source: {}", src),
         }
     }
     rates
 }
 
-async fn collect(client: &Client, source: Source) -> anyhow::Result<Vec<Rate>> {
-    let rates = match source {
+async fn collect(client: &Client, src: Source) -> anyhow::Result<Vec<Rate>> {
+    let rates = match src {
         Source::Acba => collect_acba(&client).await?,
         Source::Ameria => collect_ameria(&client).await?,
         Source::Ardshin => collect_ardshin(&client).await?,
@@ -204,7 +204,7 @@ async fn collect_cb_am(client: &Client) -> anyhow::Result<Vec<Rate>> {
         .map(|v| Rate {
             from: v.iso.clone(),
             to: Currency::default(),
-            rate_type: RateType::CB,
+            rate_type: RateType::Cb,
             buy: Some(v.rate),
             sell: Some(v.rate),
         })

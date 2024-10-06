@@ -53,7 +53,6 @@ impl Response {
                 sell: sell_cash.trim().parse().ok(),
             });
         }
-        let result = Self { rates };
-        Ok(result)
+        Ok(Self { rates })
     }
 }

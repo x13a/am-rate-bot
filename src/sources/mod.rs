@@ -2,8 +2,6 @@ pub use lsoft::SourceAphenaTrait;
 use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
-use std::str::FromStr;
-use strum::EnumIter;
 
 pub mod acba;
 pub mod aeb;
@@ -59,11 +57,24 @@ pub trait SourceCashUrlTrait {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter, strum::Display, Ord, PartialOrd)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    Hash,
+    strum::EnumIter,
+    strum::Display,
+    Ord,
+    PartialOrd,
+    strum::EnumString,
+)]
+#[strum(ascii_case_insensitive)]
 pub enum Source {
-    #[strum(serialize = "CBAM")]
+    #[strum(to_string = "CBAM")]
     CbAm,
-    #[strum(serialize = "MOEX'")]
+    #[strum(to_string = "MOEX'", serialize = "moex")]
     MoEx,
     Acba,
     Ameria,
@@ -75,22 +86,22 @@ pub enum Source {
     Mellat,
     Converse,
     AEB,
-    #[strum(serialize = "VTB AM")]
+    #[strum(to_string = "VTB AM", serialize = "vtbam")]
     VtbAm,
     Artsakh,
     UniBank,
-    #[strum(serialize = "AMIO")]
+    #[strum(to_string = "AMIO")]
     Amio,
     Byblos,
     IdBank,
     Ararat,
-    #[strum(serialize = "IdPay'")]
+    #[strum(to_string = "IdPay'", serialize = "idpay")]
     IdPay,
-    #[strum(serialize = "MIR")]
+    #[strum(to_string = "MIR")]
     Mir,
-    #[strum(serialize = "SAS")]
+    #[strum(to_string = "SAS")]
     Sas,
-    #[strum(serialize = "HSBC")]
+    #[strum(to_string = "HSBC")]
     Hsbc,
 }
 
@@ -140,29 +151,21 @@ impl Default for Currency {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, strum::EnumString)]
+#[strum(ascii_case_insensitive)]
 pub enum RateType {
+    #[strum(
+        serialize = "no cash",
+        serialize = "non cash",
+        serialize = "no_cash",
+        serialize = "non_cash",
+        serialize = "nocash"
+    )]
     NoCash = 0,
     Cash = 1,
     Card = 2,
     Online = 3,
-    CB = 4,
-}
-
-impl FromStr for RateType {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let v = match s.to_uppercase().as_str() {
-            "NO CASH" | "NON CASH" | "NO_CASH" | "NON_CASH" => Self::NoCash,
-            "CASH" => Self::Cash,
-            "CARD" => Self::Card,
-            "ONLINE" => Self::Online,
-            "CB" => Self::CB,
-            _ => return Err(Error::InvalidRateType),
-        };
-        Ok(v)
-    }
+    Cb = 4,
 }
 
 #[derive(Debug, thiserror::Error)]

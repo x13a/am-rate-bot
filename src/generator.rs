@@ -18,7 +18,7 @@ fn build_graph(rates: &[Rate], rate_type: RateType) -> HashMap<Currency, Vec<Edg
     };
     for rate in rates
         .iter()
-        .filter(|r| [rate_type, RateType::CB].contains(&r.rate_type) && r.from != r.to)
+        .filter(|r| [rate_type, RateType::Cb].contains(&r.rate_type) && r.from != r.to)
     {
         if let Some(buy) = rate.buy {
             if buy > dec!(0.0) {
@@ -90,7 +90,7 @@ fn dfs(
     visited.remove(&from);
 }
 
-pub fn generate_table(
+pub fn generate_from_to_table(
     from: Currency,
     to: Currency,
     rates: &HashMap<Source, Vec<Rate>>,
@@ -103,7 +103,7 @@ pub fn generate_table(
 
     #[derive(Debug)]
     struct Row {
-        source: Source,
+        src: Source,
         rate: Decimal,
         rate_str: String,
         diff: Decimal,
@@ -112,14 +112,14 @@ pub fn generate_table(
     }
 
     let mut table = vec![];
-    let mut source_width: usize = 0;
+    let mut src_width: usize = 0;
     let mut rate_width: usize = 0;
     let sort = if is_inv {
         |a: Decimal, b: Decimal| a.partial_cmp(&b).expect("panic")
     } else {
         |a: Decimal, b: Decimal| b.partial_cmp(&a).expect("panic")
     };
-    for (source, rates) in rates {
+    for (src, rates) in rates {
         let graph = build_graph(&rates, rate_type);
         let mut paths = find_all_paths(&graph, from.clone(), to.clone());
         if is_inv {
@@ -134,12 +134,12 @@ pub fn generate_table(
                 break;
             }
         }
-        source_width = source_width.max(source.to_string().len());
+        src_width = src_width.max(src.to_string().len());
         for (path, rate) in paths.iter().filter(|v| v.1 > dec!(0.0)) {
             let rate_str = format!("{:.4}", rate);
             rate_width = rate_width.max(rate_str.len());
             table.push(Row {
-                source: source.clone(),
+                src: src.clone(),
                 rate: *rate,
                 rate_str,
                 diff: dec!(0.0),
@@ -150,15 +150,15 @@ pub fn generate_table(
     }
     table.sort_by(|a, b| match sort(a.rate, b.rate) {
         std::cmp::Ordering::Equal => {
-            let a_source = a.source.to_string();
-            let b_source = b.source.to_string();
-            a_source.cmp(&b_source)
+            let a_src = a.src.to_string();
+            let b_src = b.src.to_string();
+            a_src.cmp(&b_src)
         }
         other => other,
     });
     let best_rate = table
         .iter()
-        .filter(|r| !Source::get_not_banks().contains(&r.source))
+        .filter(|r| !Source::get_not_banks().contains(&r.src))
         .map(|r| r.rate)
         .next()
         .unwrap_or_default();
@@ -189,9 +189,9 @@ pub fn generate_table(
     for row in table {
         writeln!(
             &mut s,
-            "{} {:<source_width$} | {:<rate_width$} | {:>diff_width$} | {}",
-            row.source.prefix(),
-            row.source.to_string(),
+            "{} {:<src_width$} | {:<rate_width$} | {:>diff_width$} | {}",
+            row.src.prefix(),
+            row.src.to_string(),
             row.rate_str,
             row.diff_str,
             row.path
@@ -209,6 +209,61 @@ pub fn generate_table(
     }
 }
 
+pub fn generate_src_table(
+    src: Source,
+    rates: &HashMap<Source, Vec<Rate>>,
+    rate_type: RateType,
+) -> String {
+    let Some(rates) = rates.get(&src) else {
+        return DUNNO.into();
+    };
+
+    #[derive(Debug)]
+    struct Row {
+        buy_str: String,
+        sell_str: String,
+        from: Currency,
+        to: Currency,
+    }
+
+    let mut table = vec![];
+    let mut buy_width: usize = 0;
+    let mut sell_width: usize = 0;
+    for rate in rates
+        .iter()
+        .filter(|v| v.rate_type == rate_type && v.buy.is_some() && v.sell.is_some())
+    {
+        let buy = rate.buy.unwrap();
+        let sell = rate.sell.unwrap();
+        if buy == dec!(0.0) || sell == dec!(0.0) {
+            continue;
+        }
+        let row = Row {
+            buy_str: format!("{:.4}", buy),
+            sell_str: format!("{:.4}", sell),
+            from: rate.from.clone(),
+            to: rate.to.clone(),
+        };
+        buy_width = buy_width.max(row.buy_str.len());
+        sell_width = sell_width.max(row.sell_str.len());
+        table.push(row);
+    }
+    let mut s = String::new();
+    for row in table {
+        writeln!(
+            &mut s,
+            "{:<buy_width$} | {:<sell_width$} | {}/{}",
+            row.buy_str, row.sell_str, row.from, row.to,
+        )
+        .expect("panic");
+    }
+    if s.is_empty() {
+        DUNNO.into()
+    } else {
+        s
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -216,6 +271,7 @@ mod tests {
     use crate::sources::acba;
     use reqwest::Client;
     use std::time::Duration;
+    use strum::IntoEnumIterator;
 
     const TIMEOUT: u64 = 10;
 
@@ -441,14 +497,27 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_generate_table() -> anyhow::Result<()> {
+    async fn test_generate_from_to_table() -> anyhow::Result<()> {
         let client = build_client()?;
         let results = collect_all(&client).await;
         let rates = filter_collection(results);
         let test_cases = get_test_cases();
         for (from, to) in test_cases {
-            let _ = generate_table(from.clone(), to.clone(), &rates, RateType::NoCash, false);
-            let _ = generate_table(to.clone(), from.clone(), &rates, RateType::NoCash, true);
+            let _ =
+                generate_from_to_table(from.clone(), to.clone(), &rates, RateType::NoCash, false);
+            let _ =
+                generate_from_to_table(to.clone(), from.clone(), &rates, RateType::NoCash, true);
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_generate_src_table() -> anyhow::Result<()> {
+        let client = build_client()?;
+        let results = collect_all(&client).await;
+        let rates = filter_collection(results);
+        for src in Source::iter() {
+            let _ = generate_src_table(src, &rates, RateType::NoCash);
         }
         Ok(())
     }

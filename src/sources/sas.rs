@@ -36,7 +36,6 @@ impl Response {
             };
             rates.push(rate);
         }
-        let result = Self { rates };
-        Ok(result)
+        Ok(Self { rates })
     }
 }

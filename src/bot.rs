@@ -1,10 +1,11 @@
-use crate::generator::generate_table;
+use crate::generator::{generate_from_to_table, generate_src_table};
 use crate::sources::{Currency, Rate, RateType, Source};
 use crate::DUNNO;
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 use std::time::SystemTime;
+use strum::IntoEnumIterator;
 use teloxide::adaptors::DefaultParseMode;
 use teloxide::types::{InputFile, ParseMode};
 use teloxide::update_listeners::webhooks;
@@ -58,6 +59,8 @@ enum Command {
     FromTo { from: String, to: String },
     #[command(description = "<FROM> <TO> inverted", parse_with = "split")]
     FromToInv { from: String, to: String },
+    #[command(description = "<SOURCE>")]
+    Get { src: Source },
     #[command(description = "AMD/USD cash")]
     UsdCash,
     #[command(description = "AMD/EUR cash")]
@@ -74,6 +77,10 @@ enum Command {
     FromToCash { from: String, to: String },
     #[command(description = "<FROM> <TO> cash inverted", parse_with = "split")]
     FromToCashInv { from: String, to: String },
+    #[command(description = "<SOURCE> cash")]
+    GetCash { src: Source },
+    #[command(description = "list sources")]
+    List,
     #[command(description = "help")]
     Help,
     #[command(description = "welcome")]
@@ -93,6 +100,7 @@ pub async fn run(db: Arc<Storage>) {
     let mut dispatcher = Dispatcher::builder(bot.clone(), handler)
         .dependencies(dptree::deps![db])
         .enable_ctrlc_handler()
+        .default_handler(|_| async move {})
         .build();
     let is_polling = env::var("POLLING").expect("panic").parse().expect("panic");
     if is_polling {
@@ -254,7 +262,53 @@ async fn command(
             )
             .await?;
         }
+        Command::Get { src } | Command::GetCash { src } => {
+            src_repl(
+                src,
+                match cmd {
+                    Command::GetCash { .. } => RateType::Cash,
+                    _ => RateType::NoCash,
+                },
+                bot,
+                msg,
+                db,
+            )
+            .await?;
+        }
+        Command::List => {
+            bot.send_message(
+                msg.chat.id,
+                Source::iter()
+                    .map(|v| {
+                        let mut s = v.to_string().to_lowercase();
+                        for c in ["'", " "] {
+                            s = s.replace(c, "");
+                        }
+                        s
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            )
+            .await?;
+        }
     }
+    Ok(())
+}
+
+async fn src_repl(
+    src: Source,
+    rate_type: RateType,
+    bot: Bot,
+    msg: Message,
+    db: Arc<Storage>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let mut rates = HashMap::new();
+    {
+        let data = db.data.lock().await;
+        rates.clone_from(&data.map);
+    }
+    let s = generate_src_table(src, &rates, rate_type);
+    bot.send_message(msg.chat.id, html::code_inline(&s)).await?;
     Ok(())
 }
 
@@ -277,8 +331,8 @@ async fn exchange_repl(
         rates.clone_from(&data.map);
     }
     for idx in 0..2 {
-        let s = generate_table(from.clone(), to.clone(), &rates, rate_type, idx % 2 == inv);
-        bot.send_message(msg.chat.id, html::code_block(&s)).await?;
+        let s = generate_from_to_table(from.clone(), to.clone(), &rates, rate_type, idx % 2 == inv);
+        bot.send_message(msg.chat.id, html::code_inline(&s)).await?;
         std::mem::swap(&mut from, &mut to);
     }
     Ok(())

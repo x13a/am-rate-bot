@@ -17,6 +17,7 @@ pub const APHENA: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 pub trait SourceAphenaTrait {
     fn url() -> String;
 
+    #[allow(async_fn_in_trait)]
     async fn get_rates<T>(c: &reqwest::Client) -> anyhow::Result<T>
     where
         T: DeserializeOwned,

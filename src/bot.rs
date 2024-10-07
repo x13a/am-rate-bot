@@ -6,23 +6,106 @@ use std::env;
 use std::sync::Arc;
 use std::time::SystemTime;
 use strum::IntoEnumIterator;
-use teloxide::adaptors::DefaultParseMode;
+use teloxide::adaptors::{throttle::Limits, DefaultParseMode};
 use teloxide::types::{InputFile, ParseMode};
 use teloxide::update_listeners::webhooks;
-use teloxide::{prelude::*, utils::command::BotCommands, utils::html};
+use teloxide::{prelude::*, requests::RequesterExt, utils::command::BotCommands, utils::html};
 use tokio::sync::Mutex;
 
 type Bot = DefaultParseMode<teloxide::Bot>;
 
 #[derive(Debug)]
 pub struct Storage {
-    pub data: Mutex<Data>,
+    data: Mutex<Data>,
+    cache: Mutex<CacheData>,
 }
 
 #[derive(Debug)]
 pub struct Data {
-    pub map: HashMap<Source, Vec<Rate>>,
-    pub updated_at: SystemTime,
+    rates: HashMap<Source, Vec<Rate>>,
+    updated_at: SystemTime,
+}
+
+impl Data {
+    fn get_rates(&self) -> HashMap<Source, Vec<Rate>> {
+        self.rates.clone()
+    }
+
+    fn set_rates(&mut self, value: &HashMap<Source, Vec<Rate>>) {
+        self.rates.clone_from(value);
+        self.updated_at = SystemTime::now();
+    }
+}
+
+#[derive(Debug)]
+pub struct CacheData {
+    from_to: HashMap<String, String>,
+    src: HashMap<String, String>,
+}
+
+impl CacheData {
+    const KEY_SEP: &'static str = "_";
+
+    fn clear(&mut self) {
+        self.from_to.clear();
+        self.src.clear();
+    }
+
+    fn add_from_to(
+        &mut self,
+        from: Currency,
+        to: Currency,
+        rate_type: RateType,
+        is_inv: bool,
+        value: String,
+    ) {
+        self.from_to
+            .insert(self.format_from_to_key(from, to, rate_type, is_inv), value);
+    }
+
+    fn add_src(&mut self, src: Source, rate_type: RateType, value: String) {
+        self.src.insert(self.format_src_key(src, rate_type), value);
+    }
+
+    fn format_src_key(&self, src: Source, rate_type: RateType) -> String {
+        [
+            src.to_string().to_lowercase(),
+            (rate_type as u8).to_string(),
+        ]
+        .join(Self::KEY_SEP)
+    }
+
+    fn get_from_to(
+        &self,
+        from: Currency,
+        to: Currency,
+        rate_type: RateType,
+        is_inv: bool,
+    ) -> Option<String> {
+        self.from_to
+            .get(&self.format_from_to_key(from, to, rate_type, is_inv))
+            .cloned()
+    }
+
+    fn get_src(&self, src: Source, rate_type: RateType) -> Option<String> {
+        self.src.get(&self.format_src_key(src, rate_type)).cloned()
+    }
+
+    fn format_from_to_key(
+        &self,
+        from: Currency,
+        to: Currency,
+        rate_type: RateType,
+        is_inv: bool,
+    ) -> String {
+        [
+            from.to_string().to_lowercase(),
+            to.to_string().to_uppercase(),
+            (rate_type as u8).to_string(),
+            (is_inv as i32).to_string(),
+        ]
+        .join(Self::KEY_SEP)
+    }
 }
 
 impl Storage {
@@ -30,10 +113,62 @@ impl Storage {
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
             data: Mutex::new(Data {
-                map: HashMap::new(),
+                rates: HashMap::new(),
                 updated_at: SystemTime::now(),
             }),
+            cache: Mutex::new(CacheData {
+                from_to: HashMap::new(),
+                src: HashMap::new(),
+            }),
         })
+    }
+
+    pub async fn get_rates(&self) -> HashMap<Source, Vec<Rate>> {
+        let data = self.data.lock().await;
+        data.get_rates()
+    }
+
+    pub async fn set_rates(&self, value: &HashMap<Source, Vec<Rate>>) {
+        let mut data = self.data.lock().await;
+        data.set_rates(value);
+    }
+
+    pub async fn clear_cache(&self) {
+        let mut cache = self.cache.lock().await;
+        cache.clear();
+    }
+
+    pub async fn get_cache_src(&self, src: Source, rate_type: RateType) -> Option<String> {
+        let cache = self.cache.lock().await;
+        cache.get_src(src, rate_type)
+    }
+
+    pub async fn get_cache_from_to(
+        &self,
+        from: Currency,
+        to: Currency,
+        rate_type: RateType,
+        is_inv: bool,
+    ) -> Option<String> {
+        let cache = self.cache.lock().await;
+        cache.get_from_to(from, to, rate_type, is_inv)
+    }
+
+    pub async fn set_cache_src(&self, src: Source, rate_type: RateType, value: String) {
+        let mut cache = self.cache.lock().await;
+        cache.add_src(src, rate_type, value);
+    }
+
+    pub async fn set_cache_from_to(
+        &self,
+        from: Currency,
+        to: Currency,
+        rate_type: RateType,
+        is_inv: bool,
+        value: String,
+    ) {
+        let mut cache = self.cache.lock().await;
+        cache.add_from_to(from, to, rate_type, is_inv, value);
     }
 }
 
@@ -88,7 +223,9 @@ enum Command {
 }
 
 pub async fn run(db: Arc<Storage>) {
-    let bot = teloxide::Bot::from_env().parse_mode(ParseMode::Html);
+    let bot = teloxide::Bot::from_env()
+        .throttle(Limits::default())
+        .parse_mode(ParseMode::Html);
     bot.set_my_commands(Command::bot_commands())
         .await
         .expect("panic");
@@ -152,7 +289,7 @@ async fn command(
             bot.send_message(msg.chat.id, "Meow!").await?;
         }
         Command::Usd | Command::UsdCash => {
-            exchange_repl(
+            from_to_repl(
                 Currency::default(),
                 Currency::usd(),
                 match cmd {
@@ -167,7 +304,7 @@ async fn command(
             .await?
         }
         Command::Eur | Command::EurCash => {
-            exchange_repl(
+            from_to_repl(
                 Currency::default(),
                 Currency::eur(),
                 match cmd {
@@ -182,7 +319,7 @@ async fn command(
             .await?
         }
         Command::Rub | Command::RubCash => {
-            exchange_repl(
+            from_to_repl(
                 Currency::rub(),
                 Currency::default(),
                 match cmd {
@@ -197,7 +334,7 @@ async fn command(
             .await?
         }
         Command::RubUsd | Command::RubUsdCash => {
-            exchange_repl(
+            from_to_repl(
                 Currency::rub(),
                 Currency::usd(),
                 match cmd {
@@ -212,7 +349,7 @@ async fn command(
             .await?
         }
         Command::RubEur | Command::RubEurCash => {
-            exchange_repl(
+            from_to_repl(
                 Currency::rub(),
                 Currency::eur(),
                 match cmd {
@@ -227,7 +364,7 @@ async fn command(
             .await?
         }
         Command::UsdEur | Command::UsdEurCash => {
-            exchange_repl(
+            from_to_repl(
                 Currency::usd(),
                 Currency::eur(),
                 match cmd {
@@ -245,7 +382,7 @@ async fn command(
         | Command::FromToInv { ref from, ref to }
         | Command::FromToCash { ref from, ref to }
         | Command::FromToCashInv { ref from, ref to } => {
-            exchange_repl(
+            from_to_repl(
                 Currency::new(from),
                 Currency::new(to),
                 match cmd {
@@ -302,17 +439,22 @@ async fn src_repl(
     msg: Message,
     db: Arc<Storage>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let mut rates = HashMap::new();
-    {
-        let data = db.data.lock().await;
-        rates.clone_from(&data.map);
-    }
-    let s = generate_src_table(src, &rates, rate_type);
+    let cached = db.get_cache_src(src, rate_type).await;
+    let s = match cached {
+        Some(s) => s,
+        None => {
+            log::debug!("empty cache src");
+            let rates = db.get_rates().await;
+            let s = generate_src_table(src, &rates, rate_type);
+            db.set_cache_src(src, rate_type, s.clone()).await;
+            s
+        }
+    };
     bot.send_message(msg.chat.id, html::code_inline(&s)).await?;
     Ok(())
 }
 
-async fn exchange_repl(
+async fn from_to_repl(
     mut from: Currency,
     mut to: Currency,
     rate_type: RateType,
@@ -325,13 +467,22 @@ async fn exchange_repl(
         bot.send_message(msg.chat.id, DUNNO).await?;
         return Ok(());
     }
-    let mut rates = HashMap::new();
-    {
-        let data = db.data.lock().await;
-        rates.clone_from(&data.map);
-    }
+    let rates = db.get_rates().await;
     for idx in 0..2 {
-        let s = generate_from_to_table(from.clone(), to.clone(), &rates, rate_type, idx % 2 == inv);
+        let is_inv = idx % 2 == inv;
+        let cached = db
+            .get_cache_from_to(from.clone(), to.clone(), rate_type, is_inv)
+            .await;
+        let s = match cached {
+            Some(s) => s,
+            None => {
+                log::debug!("empty cache from to");
+                let s = generate_from_to_table(from.clone(), to.clone(), &rates, rate_type, is_inv);
+                db.set_cache_from_to(from.clone(), to.clone(), rate_type, is_inv, s.clone())
+                    .await;
+                s
+            }
+        };
         bot.send_message(msg.chat.id, html::code_inline(&s)).await?;
         std::mem::swap(&mut from, &mut to);
     }

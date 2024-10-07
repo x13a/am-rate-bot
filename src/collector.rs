@@ -445,14 +445,6 @@ async fn collect_idbank(client: &Client) -> anyhow::Result<Vec<Rate>> {
 async fn collect_moex(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: moex::Response = moex::Response::get_rates(&client).await?;
     const BOARD_ID: &str = "CETS";
-    let facevalue = resp
-        .securities
-        .data
-        .iter()
-        .filter(|v| v.0 == BOARD_ID)
-        .map(|v| v.1)
-        .next()
-        .unwrap_or(dec!(100.0));
     let last = resp
         .marketdata
         .data
@@ -464,9 +456,17 @@ async fn collect_moex(client: &Client) -> anyhow::Result<Vec<Rate>> {
         Err(Error::NoRates)?
     };
     let mut rates = vec![];
-    if last == dec!(0.0) {
+    if last.is_zero() {
         return Ok(rates);
     }
+    let facevalue = resp
+        .securities
+        .data
+        .iter()
+        .filter(|v| v.0 == BOARD_ID)
+        .map(|v| v.1)
+        .next()
+        .unwrap_or(dec!(100.0));
     let rate = facevalue / last;
     rates.push(Rate {
         from: Currency::rub(),

@@ -1,9 +1,12 @@
 use crate::sources::{Currency, Rate, RateType, Source};
 use crate::DUNNO;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use rust_decimal_macros::dec;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
+
+const RATE_DP: u32 = 4;
+const DIFF_DP: u32 = 2;
 
 #[derive(Debug)]
 struct Edge {
@@ -136,7 +139,10 @@ pub fn generate_from_to_table(
         }
         src_width = src_width.max(src.to_string().len());
         for (path, rate) in paths.iter().filter(|v| v.1 > dec!(0.0)) {
-            let rate_str = format!("{:.4}", rate);
+            let rate_str = rate
+                .round_dp_with_strategy(RATE_DP, RoundingStrategy::MidpointAwayFromZero)
+                .normalize()
+                .to_string();
             rate_width = rate_width.max(rate_str.len());
             table.push(Row {
                 src: src.clone(),
@@ -179,10 +185,14 @@ pub fn generate_from_to_table(
     }
     table.iter_mut().for_each(|row| {
         row.diff = ((best_rate - row.rate) / row.rate) * dec!(100.0);
-        if is_desc && row.diff != dec!(0.0) {
+        if is_desc && !row.diff.is_zero() {
             row.diff = -row.diff;
         }
-        row.diff_str = format!("{:.2}", row.diff);
+        row.diff_str = row
+            .diff
+            .round_dp_with_strategy(DIFF_DP, RoundingStrategy::MidpointAwayFromZero)
+            .normalize()
+            .to_string();
         diff_width = diff_width.max(row.diff_str.len());
     });
     let mut s = String::new();
@@ -235,12 +245,18 @@ pub fn generate_src_table(
     {
         let buy = rate.buy.unwrap();
         let sell = rate.sell.unwrap();
-        if buy == dec!(0.0) || sell == dec!(0.0) {
+        if buy.is_zero() || sell.is_zero() {
             continue;
         }
         let row = Row {
-            buy_str: format!("{:.4}", buy),
-            sell_str: format!("{:.4}", sell),
+            buy_str: buy
+                .round_dp_with_strategy(RATE_DP, RoundingStrategy::MidpointAwayFromZero)
+                .normalize()
+                .to_string(),
+            sell_str: sell
+                .round_dp_with_strategy(RATE_DP, RoundingStrategy::MidpointAwayFromZero)
+                .normalize()
+                .to_string(),
             from: rate.from.clone(),
             to: rate.to.clone(),
         };

@@ -2,7 +2,7 @@ use am_rate_bot::bot;
 use am_rate_bot::collector;
 use argh::FromArgs;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 #[derive(Debug, FromArgs)]
 /// options:
@@ -11,7 +11,7 @@ struct Opts {
     #[argh(option, default = "10")]
     timeout: u64,
     /// rates collect interval
-    #[argh(option, default = "3 * 60")]
+    #[argh(option, default = "5 * 60")]
     collect_interval: u64,
 }
 
@@ -42,12 +42,8 @@ async fn collect(db: Arc<bot::Storage>, opts: Opts) {
         log::debug!("get rates");
         let results = collector::collect_all(&client).await;
         let rates = collector::filter_collection(results);
-        {
-            let mut data = db.data.lock().await;
-            data.map.clear();
-            data.map.clone_from(&rates);
-            data.updated_at = SystemTime::now();
-        }
+        db.clear_cache().await;
+        db.set_rates(&rates).await;
     };
     loop {
         get_rates().await;

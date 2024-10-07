@@ -31,6 +31,8 @@ pub mod vtb_am;
 
 pub trait SourceSingleUrlTrait {
     fn url() -> String;
+
+    #[allow(async_fn_in_trait)]
     async fn get_rates<T>(c: &reqwest::Client) -> anyhow::Result<T>
     where
         T: DeserializeOwned,
@@ -43,6 +45,8 @@ pub trait SourceSingleUrlTrait {
 pub trait SourceCashUrlTrait {
     fn url_cash() -> String;
     fn url_no_cash() -> String;
+
+    #[allow(async_fn_in_trait)]
     async fn get_rates<T>(c: &reqwest::Client, rate_type: RateType) -> anyhow::Result<T>
     where
         T: DeserializeOwned,
@@ -153,6 +157,7 @@ impl Default for Currency {
 
 #[derive(Clone, Copy, Debug, PartialEq, strum::EnumString)]
 #[strum(ascii_case_insensitive)]
+#[repr(u8)]
 pub enum RateType {
     #[strum(
         serialize = "no cash",
@@ -162,10 +167,10 @@ pub enum RateType {
         serialize = "nocash"
     )]
     NoCash = 0,
-    Cash = 1,
-    Card = 2,
-    Online = 3,
-    Cb = 4,
+    Cash,
+    Card,
+    Online,
+    Cb,
 }
 
 #[derive(Debug, thiserror::Error)]

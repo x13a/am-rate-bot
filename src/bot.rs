@@ -6,13 +6,16 @@ use std::env;
 use std::sync::Arc;
 use std::time::SystemTime;
 use strum::IntoEnumIterator;
-use teloxide::adaptors::{throttle::Limits, DefaultParseMode};
+use teloxide::adaptors::{
+    throttle::{Limits, Throttle},
+    DefaultParseMode,
+};
 use teloxide::types::{InputFile, ParseMode};
 use teloxide::update_listeners::webhooks;
 use teloxide::{prelude::*, requests::RequesterExt, utils::command::BotCommands, utils::html};
 use tokio::sync::Mutex;
 
-type Bot = DefaultParseMode<teloxide::Bot>;
+type Bot = DefaultParseMode<Throttle<teloxide::Bot>>;
 
 #[derive(Debug)]
 pub struct Storage {

@@ -4,15 +4,34 @@ use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
-pub const APHENA: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
-<request client="mobile" device="android" handler="aphena" lang="2" operation="getCurrencyList">
-   <accesstoken></accesstoken>
-   <id>5</id>
-   <getCurrencyListParameters>
-      <currency></currency>
-   </getCurrencyListParameters>
-   <userid></userid>
-</request>"#;
+pub mod request {
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    #[serde(rename = "request")]
+    pub struct Request {
+        #[serde(rename = "@client")]
+        pub client: String,
+        #[serde(rename = "@device")]
+        pub device: String,
+        #[serde(rename = "@handler")]
+        pub handler: String,
+        #[serde(rename = "@lang")]
+        pub lang: String,
+        #[serde(rename = "@operation")]
+        pub operation: String,
+        pub accesstoken: String,
+        pub id: String,
+        #[serde(rename = "getCurrencyListParameters")]
+        pub get_currency_list_parameters: GetCurrencyListParameters,
+        pub userid: String,
+    }
+
+    #[derive(Serialize)]
+    pub struct GetCurrencyListParameters {
+        pub currency: String,
+    }
+}
 
 pub trait SourceAphenaTrait {
     fn url() -> String;
@@ -22,9 +41,22 @@ pub trait SourceAphenaTrait {
     where
         T: DeserializeOwned,
     {
+        let req_body = request::Request {
+            client: "mobile".into(),
+            device: "android".into(),
+            handler: "aphena".into(),
+            lang: "2".into(),
+            operation: "getCurrencyList".into(),
+            accesstoken: "".into(),
+            id: "5".into(),
+            get_currency_list_parameters: request::GetCurrencyListParameters {
+                currency: "".into(),
+            },
+            userid: "".into(),
+        };
         let body = c
             .post(Self::url())
-            .body(APHENA)
+            .body(quick_xml::se::to_string(&req_body).expect("xml serialization failed"))
             .send()
             .await?
             .text()

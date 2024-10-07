@@ -16,6 +16,10 @@ use teloxide::{prelude::*, requests::RequesterExt, utils::command::BotCommands, 
 use tokio::sync::Mutex;
 
 type Bot = DefaultParseMode<Throttle<teloxide::Bot>>;
+const ENV_POLLING: &str = "POLLING";
+const ENV_HOST: &str = "HOST";
+const ENV_PORT: &str = "PORT";
+const ENV_CERT: &str = "CERT";
 
 #[derive(Debug)]
 pub struct Storage {
@@ -242,13 +246,16 @@ pub async fn run(db: Arc<Storage>) {
         .enable_ctrlc_handler()
         .default_handler(|_| async move {})
         .build();
-    let is_polling = env::var("POLLING").expect("panic").parse().expect("panic");
+    let is_polling = env::var(ENV_POLLING)
+        .expect("panic")
+        .parse()
+        .expect("panic");
     if is_polling {
         dispatcher.dispatch().await;
     } else {
-        let host = env::var("HOST").expect("panic");
-        let port = env::var("PORT").expect("panic").parse().expect("panic");
-        let cert = env::var("CERT").expect("panic");
+        let host = env::var(ENV_HOST).expect("panic");
+        let port = env::var(ENV_PORT).expect("panic").parse().expect("panic");
+        let cert = env::var(ENV_CERT).expect("panic");
         let url = format!("https://{host}/am-rate-bot/webhook/")
             .parse()
             .expect("panic");

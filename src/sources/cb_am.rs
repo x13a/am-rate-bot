@@ -4,12 +4,6 @@ use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://api.cba.am/exchangerates.asmx";
-pub const SOAP12_EXCHANGE_RATES_LATEST: &str = r#"<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-  <soap12:Body>
-    <ExchangeRatesLatest xmlns="http://www.cba.am/" />
-  </soap12:Body>
-</soap12:Envelope>"#;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename = "SoapEnvelope")]
@@ -70,24 +64,63 @@ pub struct ExchangeRate {
     pub difference: String,
 }
 
+pub mod request {
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    #[serde(rename = "soap12:Envelope")]
+    pub struct Soap12Envelope {
+        #[serde(rename = "@xmlns:xsi")]
+        pub xmlns_xsi: String,
+        #[serde(rename = "@xmlns:xsd")]
+        pub xmlns_xsd: String,
+        #[serde(rename = "@xmlns:soap12")]
+        pub xmlns_soap12: String,
+        #[serde(rename = "soap12:Body")]
+        pub soap12_body: Soap12Body,
+    }
+
+    #[derive(Serialize)]
+    pub struct Soap12Body {
+        #[serde(rename = "ExchangeRatesLatest")]
+        pub exchange_rates_latest: ExchangeRatesLatest,
+    }
+
+    #[derive(Serialize)]
+    pub struct ExchangeRatesLatest {
+        #[serde(rename = "@xmlns")]
+        pub xmlns: String,
+    }
+}
+
 impl Response {
     pub fn url() -> String {
         API_URL.into()
     }
 
     pub async fn get_rates(c: &reqwest::Client) -> anyhow::Result<Self> {
-        let body = c
+        let req_body = request::Soap12Envelope {
+            xmlns_xsi: "http://www.w3.org/2001/XMLSchema-instance".into(),
+            xmlns_xsd: "http://www.w3.org/2001/XMLSchema".into(),
+            xmlns_soap12: "http://www.w3.org/2003/05/soap-envelope".into(),
+            soap12_body: request::Soap12Body {
+                exchange_rates_latest: request::ExchangeRatesLatest {
+                    xmlns: "http://www.cba.am/".into(),
+                },
+            },
+        };
+        let xml = c
             .post(Self::url())
             .header(
                 reqwest::header::CONTENT_TYPE,
                 "application/soap+xml; charset=utf-8",
             )
-            .body(SOAP12_EXCHANGE_RATES_LATEST)
+            .body(quick_xml::se::to_string(&req_body).expect("xml serialization failed"))
             .send()
             .await?
             .text()
             .await?;
-        let resp = quick_xml::de::from_str(&body)?;
+        let resp = quick_xml::de::from_str(&xml)?;
         Ok(resp)
     }
 }

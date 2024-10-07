@@ -181,17 +181,17 @@ impl Storage {
     description = "These commands are supported:"
 )]
 enum Command {
-    #[command(description = "AMD/USD")]
+    #[command(description = "AMD/USD (֏ - $)")]
     Usd,
-    #[command(description = "AMD/EUR")]
+    #[command(description = "AMD/EUR (֏ - €)")]
     Eur,
-    #[command(description = "RUB/AMD")]
+    #[command(description = "RUB/AMD (₽ - ֏)")]
     Rub,
-    #[command(description = "RUB/USD")]
+    #[command(description = "RUB/USD (₽ - $)")]
     RubUsd,
-    #[command(description = "RUB/EUR")]
+    #[command(description = "RUB/EUR (₽ - €)")]
     RubEur,
-    #[command(description = "USD/EUR")]
+    #[command(description = "USD/EUR ($ - €)")]
     UsdEur,
     #[command(description = "<FROM> <TO>", parse_with = "split")]
     FromTo { from: String, to: String },
@@ -199,17 +199,17 @@ enum Command {
     FromToInv { from: String, to: String },
     #[command(description = "<SOURCE>")]
     Get { src: Source },
-    #[command(description = "AMD/USD cash")]
+    #[command(description = "AMD/USD cash (֏ - $)")]
     UsdCash,
-    #[command(description = "AMD/EUR cash")]
+    #[command(description = "AMD/EUR cash (֏ - €)")]
     EurCash,
-    #[command(description = "RUB/AMD cash")]
+    #[command(description = "RUB/AMD cash (₽ - ֏)")]
     RubCash,
-    #[command(description = "RUB/USD cash")]
+    #[command(description = "RUB/USD cash (₽ - $)")]
     RubUsdCash,
-    #[command(description = "RUB/EUR cash")]
+    #[command(description = "RUB/EUR cash (₽ - €)")]
     RubEurCash,
-    #[command(description = "USD/EUR cash")]
+    #[command(description = "USD/EUR cash ($ - €)")]
     UsdEurCash,
     #[command(description = "<FROM> <TO> cash", parse_with = "split")]
     FromToCash { from: String, to: String },

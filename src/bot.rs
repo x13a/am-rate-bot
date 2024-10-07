@@ -423,20 +423,17 @@ async fn command(
             .await?;
         }
         Command::List => {
-            bot.send_message(
-                msg.chat.id,
-                Source::iter()
-                    .map(|v| {
-                        let mut s = v.to_string().to_lowercase();
-                        for c in ["'", " "] {
-                            s = s.replace(c, "");
-                        }
-                        s
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", "),
-            )
-            .await?;
+            let mut srcs = Source::iter()
+                .map(|v| {
+                    let mut s = v.to_string().to_lowercase();
+                    for c in ["'", " "] {
+                        s = s.replace(c, "");
+                    }
+                    s
+                })
+                .collect::<Vec<_>>();
+            srcs.sort();
+            bot.send_message(msg.chat.id, srcs.join(", ")).await?;
         }
     }
     Ok(())

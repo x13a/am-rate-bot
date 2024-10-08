@@ -222,7 +222,7 @@ pub fn generate_from_to_table(
 pub fn generate_src_table(
     src: Source,
     rates: &HashMap<Source, Vec<Rate>>,
-    rate_type: RateType,
+    mut rate_type: RateType,
 ) -> String {
     let Some(rates) = rates.get(&src) else {
         return DUNNO.into();
@@ -236,13 +236,15 @@ pub fn generate_src_table(
         to: Currency,
     }
 
+    if src == Source::CbAm {
+        rate_type = RateType::Cb;
+    }
     let mut table = vec![];
     let mut buy_width: usize = 0;
     let mut sell_width: usize = 0;
-    for rate in rates
-        .iter()
-        .filter(|v| v.rate_type == rate_type && v.buy.is_some() && v.sell.is_some())
-    {
+    for rate in rates.iter().filter(|v| {
+        v.rate_type == rate_type && v.buy.is_some() && v.sell.is_some() && v.from != v.to
+    }) {
         let buy = rate.buy.unwrap();
         let sell = rate.sell.unwrap();
         if buy.is_zero() || sell.is_zero() {

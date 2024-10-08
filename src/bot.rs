@@ -1,6 +1,7 @@
 use crate::generator::{generate_from_to_table, generate_src_table};
 use crate::sources::{Currency, Rate, RateType, Source};
-use crate::DUNNO;
+use crate::{Opts, DUNNO};
+use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
@@ -20,6 +21,7 @@ const ENV_POLLING: &str = "POLLING";
 const ENV_HOST: &str = "HOST";
 const ENV_PORT: &str = "PORT";
 const ENV_CERT: &str = "CERT";
+const WELCOME_MSG: &str = "Meow!";
 
 #[derive(Debug)]
 pub struct Storage {
@@ -41,6 +43,10 @@ impl Data {
     fn set_rates(&mut self, value: &HashMap<Source, Vec<Rate>>) {
         self.rates.clone_from(value);
         self.updated_at = SystemTime::now();
+    }
+
+    fn get_updated_at(&self) -> SystemTime {
+        self.updated_at
     }
 }
 
@@ -177,6 +183,11 @@ impl Storage {
         let mut cache = self.cache.lock().await;
         cache.add_from_to(from, to, rate_type, is_inv, value);
     }
+
+    pub async fn get_updated_at(&self) -> SystemTime {
+        let data = self.data.lock().await;
+        data.get_updated_at()
+    }
 }
 
 #[derive(BotCommands, Clone)]
@@ -223,13 +234,15 @@ enum Command {
     GetCash { src: Source },
     #[command(description = "list sources")]
     List,
+    #[command(description = "bot status")]
+    Status,
     #[command(description = "help")]
     Help,
     #[command(description = "welcome")]
     Start,
 }
 
-pub async fn run(db: Arc<Storage>) {
+pub async fn run(db: Arc<Storage>, opts: Opts) {
     let bot = teloxide::Bot::from_env()
         .throttle(Limits::default())
         .parse_mode(ParseMode::Html);
@@ -242,7 +255,7 @@ pub async fn run(db: Arc<Storage>) {
             .endpoint(command),
     );
     let mut dispatcher = Dispatcher::builder(bot.clone(), handler)
-        .dependencies(dptree::deps![db])
+        .dependencies(dptree::deps![db, opts])
         .enable_ctrlc_handler()
         .default_handler(|_| async move {})
         .build();
@@ -286,6 +299,7 @@ async fn command(
     msg: Message,
     cmd: Command,
     db: Arc<Storage>,
+    opts: Opts,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     match cmd {
         Command::Help => {
@@ -296,7 +310,7 @@ async fn command(
             .await?;
         }
         Command::Start => {
-            bot.send_message(msg.chat.id, "Meow!").await?;
+            bot.send_message(msg.chat.id, WELCOME_MSG).await?;
         }
         Command::Usd | Command::UsdCash => {
             from_to_repl(
@@ -434,6 +448,20 @@ async fn command(
                 .collect::<Vec<_>>();
             srcs.sort();
             bot.send_message(msg.chat.id, srcs.join(", ")).await?;
+        }
+        Command::Status => {
+            const VERSION: &str = env!("CARGO_PKG_VERSION");
+            let updated_at = db.get_updated_at().await;
+            let update_interval = opts.update_interval;
+            let lines = [
+                format!("version: {VERSION}"),
+                format!("update_interval: {update_interval}"),
+                format!(
+                    "updated_at: {}",
+                    DateTime::<Utc>::from(updated_at).format("%F %T %Z"),
+                ),
+            ];
+            bot.send_message(msg.chat.id, lines.join("\n")).await?;
         }
     }
     Ok(())

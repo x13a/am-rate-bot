@@ -1,19 +1,6 @@
-use am_rate_bot::bot;
-use am_rate_bot::collector;
-use argh::FromArgs;
+use am_rate_bot::{bot, collector, Opts};
 use std::sync::Arc;
 use std::time::Duration;
-
-#[derive(Debug, FromArgs)]
-/// options:
-struct Opts {
-    /// reqwest timeout
-    #[argh(option, default = "10")]
-    timeout: u64,
-    /// rates collect interval
-    #[argh(option, default = "5 * 60")]
-    collect_interval: u64,
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -26,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
     };
     let task2 = async {
         let db = db.clone();
-        bot::run(db).await;
+        bot::run(db, opts).await;
     };
     tokio::join!(task1, task2);
     Ok(())
@@ -47,7 +34,7 @@ async fn collect(db: Arc<bot::Storage>, opts: Opts) {
     };
     loop {
         get_rates().await;
-        let sleep = tokio::time::sleep(Duration::from_secs(opts.collect_interval));
+        let sleep = tokio::time::sleep(Duration::from_secs(opts.update_interval));
         tokio::pin!(sleep);
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {

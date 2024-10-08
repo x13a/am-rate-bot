@@ -38,12 +38,21 @@ pub fn filter_collection(
         match result {
             Ok(v) => {
                 if v.is_empty() {
-                    log::warn!("no rate found, source: {}", src);
                     continue;
                 }
+                let v = v
+                    .iter()
+                    .filter(|v| {
+                        (!v.from.is_empty() && !v.to.is_empty())
+                            && v.from != v.to
+                            && (v.buy.is_some_and(|v| v > dec!(0.0))
+                                || v.sell.is_some_and(|v| v > dec!(0.0)))
+                    })
+                    .cloned()
+                    .collect::<Vec<_>>();
                 rates.insert(src, v);
             }
-            Err(err) => log::error!("failed to get rate: {err}, source: {}", src),
+            Err(err) => log::error!("failed to get rate: {err}, src: {src}"),
         }
     }
     rates
@@ -175,17 +184,19 @@ async fn collect_arm_swiss(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: arm_swiss::Response = arm_swiss::Response::get_rates(&client).await?;
     let lmasbrate = resp.lmasbrate.ok_or(Error::NoRates)?;
     let mut rates = vec![];
+    let to = Currency::default();
     for rate in lmasbrate {
+        let from = rate.iso;
         rates.push(Rate {
-            from: rate.iso.clone(),
-            to: Currency::default(),
+            from: from.clone(),
+            to: to.clone(),
             rate_type: RateType::NoCash,
             buy: Some(rate.bid),
             sell: Some(rate.offer),
         });
         rates.push(Rate {
-            from: rate.iso.clone(),
-            to: Currency::default(),
+            from: from.clone(),
+            to: to.clone(),
             rate_type: RateType::Cash,
             buy: Some(rate.bid_cash),
             sell: Some(rate.offer_cash),
@@ -251,25 +262,23 @@ async fn collect_ineco(client: &Client) -> anyhow::Result<Vec<Rate>> {
     }
     let items = resp.items.ok_or(Error::NoRates)?;
     let mut rates = vec![];
+    let to = Currency::default();
     for item in items {
-        if item.cashless.buy.is_some() && item.cashless.sell.is_some() {
-            rates.push(Rate {
-                from: item.code.clone(),
-                to: Currency::default(),
-                rate_type: RateType::NoCash,
-                buy: item.cashless.buy,
-                sell: item.cashless.sell,
-            });
-        }
-        if item.cash.buy.is_some() && item.cash.sell.is_some() {
-            rates.push(Rate {
-                from: item.code.clone(),
-                to: Currency::default(),
-                rate_type: RateType::Cash,
-                buy: item.cash.buy,
-                sell: item.cash.sell,
-            });
-        }
+        let from = item.code;
+        rates.push(Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::NoCash,
+            buy: item.cashless.buy,
+            sell: item.cashless.sell,
+        });
+        rates.push(Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::Cash,
+            buy: item.cash.buy,
+            sell: item.cash.sell,
+        });
     }
     Ok(rates)
 }
@@ -278,17 +287,19 @@ async fn collect_mellat(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: mellat::Response = mellat::Response::get_rates(&client).await?;
     let result = resp.result.ok_or(Error::NoRates)?;
     let mut rates = vec![];
+    let to = Currency::default();
     for rate in result.data {
+        let from = rate.currency;
         rates.push(Rate {
-            from: rate.currency.clone(),
-            to: Currency::default(),
+            from: from.clone(),
+            to: to.clone(),
             rate_type: RateType::NoCash,
             buy: Some(rate.buy),
             sell: Some(rate.sell),
         });
         rates.push(Rate {
-            from: rate.currency.clone(),
-            to: Currency::default(),
+            from: from.clone(),
+            to: to.clone(),
             rate_type: RateType::Cash,
             buy: Some(rate.buy_cash),
             sell: Some(rate.sell_cash),
@@ -323,11 +334,11 @@ async fn collect_aeb(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: aeb::Response = aeb::Response::get_rates(&client).await?;
     let mut rates = vec![];
     for item in resp.rate_currency_settings {
-        for rate in item.rates.iter().filter(|v| {
-            [RateType::NoCash, RateType::Cash].contains(&v.rate_type)
-                && v.buy_rate.is_some()
-                && v.sell_rate.is_some()
-        }) {
+        for rate in item
+            .rates
+            .iter()
+            .filter(|v| [RateType::NoCash, RateType::Cash].contains(&v.rate_type))
+        {
             rates.push(Rate {
                 from: item.currency_code.clone(),
                 to: resp.main_currency_code.clone(),
@@ -374,25 +385,23 @@ async fn collect_unibank(client: &Client) -> anyhow::Result<Vec<Rate>> {
 fn collect_lsoft(resp: lsoft::Response) -> anyhow::Result<Vec<Rate>> {
     let items = resp.get_currency_list.currency_list.ok_or(Error::NoRates)?;
     let mut rates = vec![];
+    let to = Currency::default();
     for item in items {
-        if item.buy.is_some() && item.sell.is_some() {
-            rates.push(Rate {
-                from: item.external_id.clone(),
-                to: Currency::default(),
-                rate_type: RateType::NoCash,
-                buy: item.buy,
-                sell: item.sell,
-            });
-        }
-        if item.csh_buy.is_some() && item.csh_sell.is_some() {
-            rates.push(Rate {
-                from: item.external_id.clone(),
-                to: Currency::default(),
-                rate_type: RateType::Cash,
-                buy: item.csh_buy,
-                sell: item.csh_sell,
-            });
-        }
+        let from = item.external_id;
+        rates.push(Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::NoCash,
+            buy: item.buy,
+            sell: item.sell,
+        });
+        rates.push(Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::Cash,
+            buy: item.csh_buy,
+            sell: item.csh_sell,
+        });
     }
     Ok(rates)
 }
@@ -421,25 +430,23 @@ async fn collect_idbank(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: idbank::Response = idbank::Response::get_rates(&client).await?;
     let result = resp.result.ok_or(Error::NoRates)?;
     let mut rates = vec![];
+    let to = Currency::default();
     for rate in result.currency_rate {
-        if rate.buy.is_some() && rate.sell.is_some() {
-            rates.push(Rate {
-                from: rate.iso_txt.clone(),
-                to: Currency::default(),
-                rate_type: RateType::NoCash,
-                buy: rate.buy,
-                sell: rate.sell,
-            });
-        }
-        if rate.csh_buy.is_some() && rate.csh_sell.is_some() {
-            rates.push(Rate {
-                from: rate.iso_txt.clone(),
-                to: Currency::default(),
-                rate_type: RateType::Cash,
-                buy: rate.csh_buy,
-                sell: rate.csh_sell,
-            });
-        }
+        let from = rate.iso_txt;
+        rates.push(Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::NoCash,
+            buy: rate.buy,
+            sell: rate.sell,
+        });
+        rates.push(Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::Cash,
+            buy: rate.csh_buy,
+            sell: rate.csh_sell,
+        });
     }
     Ok(rates)
 }
@@ -489,30 +496,46 @@ fn parse_moex(resp: moex::moex::Response) -> anyhow::Result<Vec<Rate>> {
 
 fn parse_tinkoff(resp: moex::tinkoff::Response) -> anyhow::Result<Vec<Rate>> {
     let mut rates = vec![];
-    let (Some(bid), Some(ask)) = (resp.bids.first(), resp.asks.first()) else {
-        return Ok(rates);
+    let mut rate_buy = None;
+    let mut rate_sell = None;
+    let find_nominal = |d: Decimal| {
+        let mut nominal = dec!(0.0);
+        for i in 0..=10 {
+            let j = 10_i64.pow(i);
+            nominal = Decimal::new(j, 0);
+            if nominal % d != nominal {
+                break;
+            }
+        }
+        nominal
     };
-    const NANO: usize = 9;
-    let buy = format!("{}.{:0NANO$}", ask.price.units, ask.price.nano).parse::<Decimal>()?;
-    let sell = format!("{}.{:0NANO$}", bid.price.units, bid.price.nano).parse::<Decimal>()?;
-    if buy.is_zero() || sell.is_zero() {
-        return Ok(rates);
-    }
-    let mut nominal = dec!(0.0);
-    for i in 0..=10 {
-        let j = 10_i64.pow(i);
-        nominal = Decimal::new(j, 0);
-        if nominal % buy != nominal {
-            break;
+    let to_decimal = |units: String, nano: i32| {
+        const NANO: usize = 9;
+        format!("{}.{:0NANO$}", units, nano).parse::<Decimal>()
+    };
+    if let Some(bid) = resp.bids.first() {
+        let sell = to_decimal(bid.price.units.clone(), bid.price.nano)?;
+        if sell > dec!(0.0) {
+            let nominal = find_nominal(sell);
+            rate_sell = Some(nominal / sell);
         }
     }
-    rates.push(Rate {
-        from: Currency::rub(),
-        to: Currency::default(),
-        rate_type: RateType::NoCash,
-        buy: Some(nominal / buy),
-        sell: Some(nominal / sell),
-    });
+    if let Some(ask) = resp.asks.first() {
+        let buy = to_decimal(ask.price.units.clone(), ask.price.nano)?;
+        if buy > dec!(0.0) {
+            let nominal = find_nominal(buy);
+            rate_buy = Some(nominal / buy);
+        }
+    }
+    if rate_buy.is_some() || rate_sell.is_some() {
+        rates.push(Rate {
+            from: Currency::rub(),
+            to: Currency::default(),
+            rate_type: RateType::NoCash,
+            buy: rate_buy,
+            sell: rate_sell,
+        });
+    }
     Ok(rates)
 }
 
@@ -534,18 +557,28 @@ async fn collect_idpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let rates = result
         .currency_rate
         .iter()
-        .filter(|v| v.buy.is_some() && v.sell.is_some() && v.iso_txt == Currency::rub())
+        .filter(|v| v.iso_txt == Currency::rub())
         .map(|v| {
-            let buy = v.buy.unwrap();
-            let sell = v.sell.unwrap();
+            let mut rate_buy = None;
+            let mut rate_sell = None;
+            if let Some(buy) = v.buy {
+                if buy > dec!(0.0) {
+                    rate_buy = Some(buy - (COMMISSION_RATE / dec!(100.0) * buy));
+                }
+            };
+            if let Some(sell) = v.sell {
+                if sell > dec!(0.0) {
+                    rate_sell = Some(
+                        sell + ((COMMISSION_RATE + RU_CARD_COMMISSION_RATE) / dec!(100.0) * sell),
+                    );
+                }
+            }
             Rate {
                 from: v.iso_txt.clone(),
                 to: Currency::default(),
                 rate_type: RateType::NoCash,
-                buy: Some(buy - (COMMISSION_RATE / dec!(100.0) * buy)),
-                sell: Some(
-                    sell + ((COMMISSION_RATE + RU_CARD_COMMISSION_RATE) / dec!(100.0) * sell),
-                ),
+                buy: rate_buy,
+                sell: rate_sell,
             }
         })
         .collect();
@@ -559,24 +592,26 @@ async fn collect_mir(client: &Client) -> anyhow::Result<Vec<Rate>> {
         .iter()
         .filter(|v| v.currency.strcode == Currency::default())
         .map(|v| {
-            let buy = Some(dec!(1.0) / v.value_sell);
-            let sell = Some(dec!(1.0) / v.value_buy);
-            [
-                Rate {
-                    from: Currency::rub(),
-                    to: Currency::default(),
-                    rate_type: RateType::NoCash,
-                    buy,
-                    sell,
-                },
-                Rate {
-                    from: Currency::rub(),
-                    to: Currency::default(),
-                    rate_type: RateType::Cash,
-                    buy,
-                    sell,
-                },
-            ]
+            let buy = if v.value_sell > dec!(0.0) {
+                Some(dec!(1.0) / v.value_sell)
+            } else {
+                None
+            };
+            let sell = if v.value_buy > dec!(0.0) {
+                Some(dec!(1.0) / v.value_buy)
+            } else {
+                None
+            };
+            let from = Currency::rub();
+            let to = Currency::default();
+            let new_rate = |rate_type: RateType| Rate {
+                from: from.clone(),
+                to: to.clone(),
+                rate_type,
+                buy,
+                sell,
+            };
+            [new_rate(RateType::NoCash), new_rate(RateType::Cash)]
         })
         .flatten()
         .collect();
@@ -585,24 +620,12 @@ async fn collect_mir(client: &Client) -> anyhow::Result<Vec<Rate>> {
 
 async fn collect_sas(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: sas::Response = sas::Response::get_rates(&client).await?;
-    let rates = resp
-        .rates
-        .iter()
-        .filter(|v| v.buy.is_some() && v.sell.is_some())
-        .cloned()
-        .collect();
-    Ok(rates)
+    Ok(resp.rates)
 }
 
 async fn collect_hsbc(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: hsbc::Response = hsbc::Response::get_rates(&client).await?;
-    let rates = resp
-        .rates
-        .iter()
-        .filter(|v| v.buy.is_some() && v.sell.is_some())
-        .cloned()
-        .collect();
-    Ok(rates)
+    Ok(resp.rates)
 }
 
 async fn collect_avosend(client: &Client) -> anyhow::Result<Vec<Rate>> {

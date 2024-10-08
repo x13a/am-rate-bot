@@ -100,7 +100,7 @@ pub fn generate_from_to_table(
     rate_type: RateType,
     is_inv: bool,
 ) -> String {
-    if from == to {
+    if from == to || from.is_empty() || to.is_empty() {
         return DUNNO.into();
     }
 
@@ -138,15 +138,12 @@ pub fn generate_from_to_table(
             }
         }
         src_width = src_width.max(src.to_string().len());
-        for (path, rate) in paths.iter().filter(|v| v.1 > dec!(0.0)) {
-            let rate_str = rate
-                .round_dp_with_strategy(RATE_DP, RoundingStrategy::MidpointAwayFromZero)
-                .normalize()
-                .to_string();
+        for (path, rate) in paths {
+            let rate_str = decimal_to_string(rate, RATE_DP);
             rate_width = rate_width.max(rate_str.len());
             table.push(Row {
                 src: src.clone(),
-                rate: *rate,
+                rate,
                 rate_str,
                 diff: dec!(0.0),
                 diff_str: "".into(),
@@ -168,7 +165,6 @@ pub fn generate_from_to_table(
         .map(|r| r.rate)
         .next()
         .unwrap_or_default();
-    let mut diff_width: usize = 0;
     let mut is_desc = false;
     let mut rate = dec!(0.0);
     for (idx, row) in table.iter().enumerate() {
@@ -183,16 +179,13 @@ pub fn generate_from_to_table(
             break;
         }
     }
+    let mut diff_width: usize = 0;
     table.iter_mut().for_each(|row| {
         row.diff = ((best_rate - row.rate) / row.rate) * dec!(100.0);
         if is_desc && !row.diff.is_zero() {
             row.diff = -row.diff;
         }
-        row.diff_str = row
-            .diff
-            .round_dp_with_strategy(DIFF_DP, RoundingStrategy::MidpointAwayFromZero)
-            .normalize()
-            .to_string();
+        row.diff_str = decimal_to_string(row.diff, DIFF_DP);
         diff_width = diff_width.max(row.diff_str.len());
     });
     let mut s = String::new();
@@ -219,6 +212,13 @@ pub fn generate_from_to_table(
     }
 }
 
+fn decimal_to_string(value: Decimal, dp: u32) -> String {
+    value
+        .round_dp_with_strategy(dp, RoundingStrategy::MidpointAwayFromZero)
+        .normalize()
+        .to_string()
+}
+
 pub fn generate_src_table(
     src: Source,
     rates: &HashMap<Source, Vec<Rate>>,
@@ -242,23 +242,22 @@ pub fn generate_src_table(
     let mut table = vec![];
     let mut buy_width: usize = 0;
     let mut sell_width: usize = 0;
-    for rate in rates.iter().filter(|v| {
-        v.rate_type == rate_type && v.buy.is_some() && v.sell.is_some() && v.from != v.to
-    }) {
-        let buy = rate.buy.unwrap();
-        let sell = rate.sell.unwrap();
-        if buy.is_zero() || sell.is_zero() {
-            continue;
-        }
+    const NO_RATE: &str = "-";
+    for rate in rates
+        .iter()
+        .filter(|v| v.rate_type == rate_type && v.from != v.to)
+    {
+        let buy_str = match rate.buy {
+            Some(buy) => decimal_to_string(buy, RATE_DP),
+            _ => NO_RATE.to_string(),
+        };
+        let sell_str = match rate.sell {
+            Some(sell) => decimal_to_string(sell, RATE_DP),
+            _ => NO_RATE.to_string(),
+        };
         let row = Row {
-            buy_str: buy
-                .round_dp_with_strategy(RATE_DP, RoundingStrategy::MidpointAwayFromZero)
-                .normalize()
-                .to_string(),
-            sell_str: sell
-                .round_dp_with_strategy(RATE_DP, RoundingStrategy::MidpointAwayFromZero)
-                .normalize()
-                .to_string(),
+            buy_str,
+            sell_str,
             from: rate.from.clone(),
             to: rate.to.clone(),
         };

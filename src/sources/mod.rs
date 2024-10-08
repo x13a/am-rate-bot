@@ -136,7 +136,7 @@ impl Source {
 }
 
 #[derive(Debug, PartialEq, Clone, Eq, Hash, derive_more::Display)]
-pub struct Currency(String);
+pub struct Currency(pub String);
 
 impl Currency {
     pub const AMD: &'static str = "AMD";
@@ -158,6 +158,10 @@ impl Currency {
 
     pub fn rub() -> Self {
         Self(Self::RUB.into())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 

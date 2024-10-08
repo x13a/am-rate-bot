@@ -9,6 +9,7 @@ RUN cargo build --locked --release --bins
 FROM alpine
 
 COPY --from=0 /build/target/release/am-rate-bot /
+LABEL com.centurylinklabs.watchtower.enable="true"
 
 USER nobody:nogroup
 STOPSIGNAL SIGINT

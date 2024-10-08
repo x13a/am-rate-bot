@@ -12,6 +12,7 @@ pub mod ardshin;
 pub mod arm_swiss;
 pub mod armsoft;
 pub mod artsakh;
+pub mod avosend;
 pub mod byblos;
 pub mod cb_am;
 pub mod converse;
@@ -19,6 +20,7 @@ pub mod evoca;
 pub mod fast;
 pub mod hsbc;
 pub mod idbank;
+pub mod idpay;
 pub mod ineco;
 pub mod lsoft;
 pub mod mellat;
@@ -108,6 +110,7 @@ pub enum Source {
     Sas,
     #[strum(to_string = "HSBC")]
     Hsbc,
+    Avosend,
 }
 
 impl Source {
@@ -120,7 +123,15 @@ impl Source {
     }
 
     pub fn get_not_banks() -> Vec<Self> {
-        [Self::CbAm, Self::MoEx, Self::IdPay, Self::Mir, Self::Sas].into()
+        [
+            Self::CbAm,
+            Self::MoEx,
+            Self::IdPay,
+            Self::Mir,
+            Self::Sas,
+            Self::Avosend,
+        ]
+        .into()
     }
 }
 
@@ -354,7 +365,7 @@ mod tests {
     #[tokio::test]
     async fn test_idpay() -> anyhow::Result<()> {
         let c = build_client()?;
-        let _: idbank::Response = idbank::Response::get_rates(&c).await?;
+        let _: idpay::Response = idpay::Response::get_rates(&c).await?;
         Ok(())
     }
 
@@ -377,6 +388,13 @@ mod tests {
     async fn test_hsbc() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: hsbc::Response = hsbc::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_avosend() -> anyhow::Result<()> {
+        let c = build_client()?;
+        let _: avosend::Response = avosend::Response::get_rates(&c).await?;
         Ok(())
     }
 }

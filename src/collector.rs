@@ -1,7 +1,8 @@
 use crate::sources::{
-    acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, byblos, cb_am, converse,
-    evoca, fast, hsbc, idbank, ineco, lsoft, mellat, mir, moex, sas, unibank, vtb_am, Currency,
-    Rate, RateType, Source, SourceAphenaTrait, SourceCashUrlTrait, SourceSingleUrlTrait,
+    acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, avosend, byblos, cb_am,
+    converse, evoca, fast, hsbc, idbank, idpay, ineco, lsoft, mellat, mir, moex, sas, unibank,
+    vtb_am, Currency, Rate, RateType, Source, SourceAphenaTrait, SourceCashUrlTrait,
+    SourceSingleUrlTrait,
 };
 use reqwest::Client;
 use rust_decimal::Decimal;
@@ -73,6 +74,7 @@ async fn collect(client: &Client, src: Source) -> anyhow::Result<Vec<Rate>> {
         Source::Mir => collect_mir(&client).await?,
         Source::Sas => collect_sas(&client).await?,
         Source::Hsbc => collect_hsbc(&client).await?,
+        Source::Avosend => collect_avosend(&client).await?,
     };
     Ok(rates)
 }
@@ -525,7 +527,7 @@ async fn collect_ararat(client: &Client) -> anyhow::Result<Vec<Rate>> {
 }
 
 async fn collect_idpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
-    let resp: idbank::Response = idbank::Response::get_rates(&client).await?;
+    let resp: idpay::Response = idpay::Response::get_rates(&client).await?;
     let result = resp.result.ok_or(Error::NoRates)?;
     const COMMISSION_RATE: Decimal = dec!(0.9);
     const RU_CARD_COMMISSION_RATE: Decimal = dec!(0.3);
@@ -600,6 +602,22 @@ async fn collect_hsbc(client: &Client) -> anyhow::Result<Vec<Rate>> {
         .filter(|v| v.buy.is_some() && v.sell.is_some())
         .cloned()
         .collect();
+    Ok(rates)
+}
+
+async fn collect_avosend(client: &Client) -> anyhow::Result<Vec<Rate>> {
+    let resp: avosend::Response = avosend::Response::get_rates(&client).await?;
+    if resp.code != 0 {
+        return Err(Error::NoRates)?;
+    }
+    let mut rates = vec![];
+    rates.push(Rate {
+        from: Currency::rub(),
+        to: Currency::default(),
+        rate_type: RateType::NoCash,
+        buy: Some(resp.convert_rate),
+        sell: None,
+    });
     Ok(rates)
 }
 
@@ -776,6 +794,13 @@ mod tests {
     async fn test_collect_hsbc() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Hsbc).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_avosend() -> anyhow::Result<()> {
+        let c = build_client()?;
+        collect(&c, Source::Avosend).await?;
         Ok(())
     }
 }

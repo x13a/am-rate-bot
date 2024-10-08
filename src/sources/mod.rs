@@ -73,6 +73,7 @@ pub trait SourceCashUrlTrait {
     Ord,
     PartialOrd,
     strum::EnumString,
+    strum::EnumCount,
 )]
 #[strum(ascii_case_insensitive)]
 pub enum Source {

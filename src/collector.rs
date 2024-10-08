@@ -8,12 +8,12 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use strum::IntoEnumIterator;
+use strum::{EnumCount, IntoEnumIterator};
 use tokio::sync::mpsc;
 
 pub async fn collect_all(client: &Client) -> HashMap<Source, anyhow::Result<Vec<Rate>>> {
     let mut results = HashMap::new();
-    let (tx, mut rx) = mpsc::channel(Source::iter().count());
+    let (tx, mut rx) = mpsc::channel(Source::COUNT);
     for src in Source::iter() {
         let client = client.clone();
         let tx = tx.clone();
@@ -444,6 +444,14 @@ async fn collect_idbank(client: &Client) -> anyhow::Result<Vec<Rate>> {
 
 async fn collect_moex(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: moex::Response = moex::Response::get_rates(&client).await?;
+    match resp {
+        moex::Response::MoEx(v) => parse_moex(v),
+        moex::Response::Tinkoff(v) => parse_tinkoff(v),
+    }
+}
+
+fn parse_moex(resp: moex::moex::Response) -> anyhow::Result<Vec<Rate>> {
+    let mut rates = vec![];
     const BOARD_ID: &str = "CETS";
     let last = resp
         .marketdata
@@ -455,7 +463,6 @@ async fn collect_moex(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let Some(last) = last else {
         Err(Error::NoRates)?
     };
-    let mut rates = vec![];
     if last.is_zero() {
         return Ok(rates);
     }
@@ -474,6 +481,35 @@ async fn collect_moex(client: &Client) -> anyhow::Result<Vec<Rate>> {
         rate_type: RateType::NoCash,
         buy: Some(rate),
         sell: Some(rate),
+    });
+    Ok(rates)
+}
+
+fn parse_tinkoff(resp: moex::tinkoff::Response) -> anyhow::Result<Vec<Rate>> {
+    let mut rates = vec![];
+    let (Some(bid), Some(ask)) = (resp.bids.first(), resp.asks.first()) else {
+        return Ok(rates);
+    };
+    const NANO: usize = 9;
+    let buy = format!("{}.{:0NANO$}", ask.price.units, ask.price.nano).parse::<Decimal>()?;
+    let sell = format!("{}.{:0NANO$}", bid.price.units, bid.price.nano).parse::<Decimal>()?;
+    if buy.is_zero() || sell.is_zero() {
+        return Ok(rates);
+    }
+    let mut nominal = dec!(0.0);
+    for i in 0..=10 {
+        let j = 10_i64.pow(i);
+        nominal = Decimal::new(j, 0);
+        if nominal % buy != nominal {
+            break;
+        }
+    }
+    rates.push(Rate {
+        from: Currency::rub(),
+        to: Currency::default(),
+        rate_type: RateType::NoCash,
+        buy: Some(nominal / buy),
+        sell: Some(nominal / sell),
     });
     Ok(rates)
 }

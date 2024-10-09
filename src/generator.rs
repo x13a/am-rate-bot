@@ -129,12 +129,14 @@ pub fn generate_from_to_table(
             paths.iter_mut().for_each(|v| v.1 = dec!(1.0) / v.1);
         }
         paths.sort_by(|a, b| sort(a.1, b.1));
-        let max_len = paths.iter().map(|v| v.0.len()).max().unwrap_or(3);
-        for i in 2..max_len + 1 {
-            let pos = paths.iter().position(|v| v.0.len() == i);
-            if let Some(pos) = pos {
-                paths.drain(pos + 1..);
-                break;
+        if ![Source::IdPay].contains(src) {
+            let max_len = paths.iter().map(|v| v.0.len()).max().unwrap_or(3);
+            for i in 2..max_len + 1 {
+                let pos = paths.iter().position(|v| v.0.len() == i);
+                if let Some(pos) = pos {
+                    paths.drain(pos + 1..);
+                    break;
+                }
             }
         }
         src_width = src_width.max(src.to_string().len());

@@ -560,6 +560,7 @@ async fn collect_idpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
         .map(|v| {
             let mut rate_buy = None;
             let mut rate_sell = None;
+            let mut rate_buy_idbank = None;
             if let Some(buy) = v.buy {
                 if buy > dec!(0.0) {
                     rate_buy = Some(buy - (COMMISSION_RATE / dec!(100.0) * buy));
@@ -572,14 +573,31 @@ async fn collect_idpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
                     );
                 }
             }
-            Rate {
-                from: v.iso_txt.clone(),
-                to: Currency::default(),
-                rate_type: RateType::NoCash,
-                buy: rate_buy,
-                sell: rate_sell,
+            if let Some(sell) = v.csh_sell_trf {
+                if sell > dec!(0.0) {
+                    rate_buy_idbank = Some(sell - (COMMISSION_RATE / dec!(100.0) * sell))
+                }
             }
+            let from = v.iso_txt.clone();
+            let to = Currency::default();
+            [
+                Rate {
+                    from: from.clone(),
+                    to: to.clone(),
+                    rate_type: RateType::NoCash,
+                    buy: rate_buy,
+                    sell: rate_sell,
+                },
+                Rate {
+                    from: from.clone(),
+                    to: to.clone(),
+                    rate_type: RateType::NoCash,
+                    buy: rate_buy_idbank,
+                    sell: None,
+                },
+            ]
         })
+        .flatten()
         .collect();
     Ok(rates)
 }

@@ -1,7 +1,7 @@
 use crate::sources::{
     acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, avosend, byblos, cb_am,
-    converse, evoca, fast, hsbc, idbank, idpay, ineco, lsoft, mellat, mir, moex, sas, unibank,
-    vtb_am, Currency, Rate, RateType, Source, SourceAphenaTrait, SourceCashUrlTrait,
+    converse, evoca, fast, hsbc, idbank, idpay, ineco, lsoft, mellat, mir, moex, moneytun, sas,
+    unibank, vtb_am, Currency, Rate, RateType, Source, SourceAphenaTrait, SourceCashUrlTrait,
     SourceSingleUrlTrait,
 };
 use reqwest::Client;
@@ -83,6 +83,7 @@ async fn collect(client: &Client, src: Source) -> anyhow::Result<Vec<Rate>> {
         Source::Sas => collect_sas(&client).await?,
         Source::Hsbc => collect_hsbc(&client).await?,
         Source::Avosend => collect_avosend(&client).await?,
+        Source::Moneytun => collect_moneytun(&client).await?,
     };
     Ok(rates)
 }
@@ -553,6 +554,7 @@ async fn collect_idpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let result = resp.result.ok_or(Error::NoRates)?;
     const COMMISSION_RATE: Decimal = dec!(0.9);
     const RU_CARD_COMMISSION_RATE: Decimal = dec!(0.3);
+    let to = Currency::default();
     let rates = result
         .currency_rate
         .iter()
@@ -579,7 +581,6 @@ async fn collect_idpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
                 }
             }
             let from = v.iso_txt.clone();
-            let to = Currency::default();
             [
                 Rate {
                     from: from.clone(),
@@ -604,10 +605,11 @@ async fn collect_idpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
 
 async fn collect_mir(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: mir::Response = mir::Response::get_rates(&client).await?;
+    let to = Currency::default();
     let rates = resp
         .content
         .iter()
-        .filter(|v| v.currency.strcode == Currency::default())
+        .filter(|v| v.currency.strcode == to)
         .map(|v| {
             let buy = if v.value_sell > dec!(0.0) {
                 Some(dec!(1.0) / v.value_sell)
@@ -620,7 +622,6 @@ async fn collect_mir(client: &Client) -> anyhow::Result<Vec<Rate>> {
                 None
             };
             let from = Currency::rub();
-            let to = Currency::default();
             let new_rate = |rate_type: RateType| Rate {
                 from: from.clone(),
                 to: to.clone(),
@@ -650,15 +651,27 @@ async fn collect_avosend(client: &Client) -> anyhow::Result<Vec<Rate>> {
     if resp.code != 0 {
         return Err(Error::NoRates)?;
     }
-    let mut rates = vec![];
-    rates.push(Rate {
+    Ok(vec![Rate {
         from: Currency::rub(),
         to: Currency::default(),
         rate_type: RateType::NoCash,
         buy: Some(resp.convert_rate),
         sell: None,
-    });
-    Ok(rates)
+    }])
+}
+
+async fn collect_moneytun(client: &Client) -> anyhow::Result<Vec<Rate>> {
+    let resp: moneytun::Response = moneytun::Response::get_rates(&client).await?;
+    if resp.status_code != 0 {
+        return Err(Error::NoRates)?;
+    }
+    Ok(vec![Rate {
+        from: Currency::rub(),
+        to: Currency::default(),
+        rate_type: RateType::NoCash,
+        buy: Some(resp.calculation_result.exchange_rate2),
+        sell: None,
+    }])
 }
 
 #[cfg(test)]
@@ -841,6 +854,13 @@ mod tests {
     async fn test_collect_avosend() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Avosend).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_moneytun() -> anyhow::Result<()> {
+        let c = build_client()?;
+        collect(&c, Source::Moneytun).await?;
         Ok(())
     }
 }

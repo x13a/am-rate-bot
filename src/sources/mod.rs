@@ -26,6 +26,7 @@ pub mod lsoft;
 pub mod mellat;
 pub mod mir;
 pub mod moex;
+pub mod moneytun;
 pub mod sas;
 pub mod unibank;
 mod utils;
@@ -110,7 +111,10 @@ pub enum Source {
     Sas,
     #[strum(to_string = "HSBC")]
     Hsbc,
+    #[strum(to_string = "Avosend'", serialize = "avosend")]
     Avosend,
+    #[strum(to_string = "Moneytun'", serialize = "moneytun")]
+    Moneytun,
 }
 
 impl Source {
@@ -130,6 +134,7 @@ impl Source {
             Self::Mir,
             Self::Sas,
             Self::Avosend,
+            Self::Moneytun,
         ]
         .into()
     }
@@ -399,6 +404,13 @@ mod tests {
     async fn test_avosend() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: avosend::Response = avosend::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_moneytun() -> anyhow::Result<()> {
+        let c = build_client()?;
+        let _: moneytun::Response = moneytun::Response::get_rates(&c).await?;
         Ok(())
     }
 }

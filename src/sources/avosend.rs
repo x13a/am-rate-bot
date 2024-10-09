@@ -74,7 +74,7 @@ impl Response {
             country_id_to: AM_ID,
             currency_id_from: RU_ID,
             currency_id_to: AM_ID,
-            summ_send: 1000,
+            summ_send: 10000,
             direction: "from".into(),
         };
         let mut resp = c

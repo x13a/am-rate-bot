@@ -485,7 +485,7 @@ async fn src_repl(
             s
         }
     };
-    bot.send_message(msg.chat.id, html::code_inline(&s)).await?;
+    bot.send_message(msg.chat.id, html::code_block(&s)).await?;
     Ok(())
 }
 

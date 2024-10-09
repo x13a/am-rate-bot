@@ -102,8 +102,8 @@ pub enum Source {
     Byblos,
     IdBank,
     Ararat,
-    // #[strum(to_string = "IdPay'", serialize = "idpay")]
-    // IdPay,
+    #[strum(to_string = "IdPay'", serialize = "idpay")]
+    IdPay,
     #[strum(to_string = "MIR")]
     Mir,
     #[strum(to_string = "SAS")]
@@ -126,7 +126,7 @@ impl Source {
         [
             Self::CbAm,
             Self::MoEx,
-            // Self::IdPay,
+            Self::IdPay,
             Self::Mir,
             Self::Sas,
             Self::Avosend,
@@ -365,13 +365,13 @@ mod tests {
         Ok(())
     }
 
-    // #[ignore]
-    // #[tokio::test]
-    // async fn test_idpay() -> anyhow::Result<()> {
-    //     let c = build_client()?;
-    //     let _: idpay::Response = idpay::Response::get_rates(&c).await?;
-    //     Ok(())
-    // }
+    #[ignore]
+    #[tokio::test]
+    async fn test_idpay() -> anyhow::Result<()> {
+        let c = build_client()?;
+        let _: idpay::Response = idpay::Response::get_rates(&c).await?;
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_mir() -> anyhow::Result<()> {

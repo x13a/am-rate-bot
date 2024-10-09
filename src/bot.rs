@@ -485,7 +485,7 @@ async fn src_repl(
             s
         }
     };
-    bot.send_message(msg.chat.id, html::code_block(&s)).await?;
+    bot.send_message(msg.chat.id, html::code_inline(&s)).await?;
     Ok(())
 }
 
@@ -518,7 +518,7 @@ async fn from_to_repl(
                 s
             }
         };
-        bot.send_message(msg.chat.id, html::code_inline(&s)).await?;
+        bot.send_message(msg.chat.id, html::code_block(&s)).await?;
         std::mem::swap(&mut from, &mut to);
     }
     Ok(())

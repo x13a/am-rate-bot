@@ -100,7 +100,7 @@ pub fn generate_from_to_table(
     rate_type: RateType,
     is_inv: bool,
 ) -> String {
-    if from == to || from.is_empty() || to.is_empty() {
+    if from.is_empty() || to.is_empty() {
         return DUNNO.into();
     }
 

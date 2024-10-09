@@ -498,7 +498,7 @@ async fn from_to_repl(
     msg: Message,
     db: Arc<Storage>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    if from == to || from.is_empty() || to.is_empty() {
+    if from.is_empty() || to.is_empty() {
         bot.send_message(msg.chat.id, DUNNO).await?;
         return Ok(());
     }

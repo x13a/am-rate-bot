@@ -1,13 +1,14 @@
 use crate::sources::{
     acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, avosend, byblos, cb_am,
-    converse, evoca, fast, hsbc, idbank, idpay, ineco, lsoft, mellat, mir, moex, moneytun, sas,
-    unibank, vtb_am, Currency, Rate, RateType, Source, SourceAphenaTrait, SourceCashUrlTrait,
-    SourceSingleUrlTrait,
+    converse, evoca, fast, hsbc, idbank, idpay, ineco, kwikpay, lsoft, mellat, mir, moex, moneytun,
+    sas, unibank, vtb_am, AphenaResponse, Currency, JsonResponse, Rate, RateType, RateTypeResponse,
+    Source,
 };
 use reqwest::Client;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::HashMap;
+use std::env;
 use std::fmt::Debug;
 use strum::{EnumCount, IntoEnumIterator};
 use tokio::sync::mpsc;
@@ -16,6 +17,17 @@ pub async fn collect_all(client: &Client) -> HashMap<Source, anyhow::Result<Vec<
     let mut results = HashMap::new();
     let (tx, mut rx) = mpsc::channel(Source::COUNT);
     for src in Source::iter() {
+        match src {
+            Source::MoEx => {
+                if env::var(moex::ENV_TINKOFF_TOKEN)
+                    .unwrap_or_default()
+                    .is_empty()
+                {
+                    continue;
+                }
+            }
+            _ => {}
+        }
         let client = client.clone();
         let tx = tx.clone();
         tokio::spawn(async move {
@@ -84,6 +96,7 @@ async fn collect(client: &Client, src: Source) -> anyhow::Result<Vec<Rate>> {
         Source::Hsbc => collect_hsbc(&client).await?,
         Source::Avosend => collect_avosend(&client).await?,
         Source::Moneytun => collect_moneytun(&client).await?,
+        Source::Kwikpay => collect_kwikpay(&client).await?,
     };
     Ok(rates)
 }
@@ -453,49 +466,6 @@ async fn collect_idbank(client: &Client) -> anyhow::Result<Vec<Rate>> {
 
 async fn collect_moex(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: moex::Response = moex::Response::get_rates(&client).await?;
-    match resp {
-        moex::Response::MoEx(v) => parse_moex(v),
-        moex::Response::Tinkoff(v) => parse_tinkoff(v),
-    }
-}
-
-fn parse_moex(resp: moex::moex::Response) -> anyhow::Result<Vec<Rate>> {
-    let mut rates = vec![];
-    const BOARD_ID: &str = "CETS";
-    let last = resp
-        .marketdata
-        .data
-        .iter()
-        .filter(|v| v.0 == BOARD_ID)
-        .filter_map(|v| v.1)
-        .next();
-    let Some(last) = last else {
-        Err(Error::NoRates)?
-    };
-    if last.is_zero() {
-        return Ok(rates);
-    }
-    let facevalue = resp
-        .securities
-        .data
-        .iter()
-        .filter(|v| v.0 == BOARD_ID)
-        .map(|v| v.1)
-        .next()
-        .unwrap_or(dec!(100.0));
-    let rate = facevalue / last;
-    rates.push(Rate {
-        from: Currency::rub(),
-        to: Currency::default(),
-        rate_type: RateType::NoCash,
-        buy: Some(rate),
-        sell: Some(rate),
-    });
-    Ok(rates)
-}
-
-fn parse_tinkoff(resp: moex::tinkoff::Response) -> anyhow::Result<Vec<Rate>> {
-    let mut rates = vec![];
     let mut rate_buy = None;
     let mut rate_sell = None;
     let find_nominal = |d: Decimal| {
@@ -527,6 +497,7 @@ fn parse_tinkoff(resp: moex::tinkoff::Response) -> anyhow::Result<Vec<Rate>> {
             rate_buy = Some(nominal / buy);
         }
     }
+    let mut rates = vec![];
     if rate_buy.is_some() || rate_sell.is_some() {
         rates.push(Rate {
             from: Currency::rub(),
@@ -552,88 +523,87 @@ async fn collect_ararat(client: &Client) -> anyhow::Result<Vec<Rate>> {
 async fn collect_idpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: idpay::Response = idpay::Response::get_rates(&client).await?;
     let result = resp.result.ok_or(Error::NoRates)?;
-    const COMMISSION_RATE: Decimal = dec!(0.9);
-    const RU_CARD_COMMISSION_RATE: Decimal = dec!(0.3);
     let to = Currency::default();
-    let rates = result
+    let Some(rate) = result
         .currency_rate
         .iter()
         .filter(|v| v.iso_txt == Currency::rub())
-        .map(|v| {
-            let mut rate_buy = None;
-            let mut rate_sell = None;
-            let mut rate_buy_idbank = None;
-            if let Some(buy) = v.buy {
-                if buy > dec!(0.0) {
-                    rate_buy = Some(buy - (COMMISSION_RATE / dec!(100.0) * buy));
-                }
-            };
-            if let Some(sell) = v.sell {
-                if sell > dec!(0.0) {
-                    rate_sell = Some(
-                        sell + ((COMMISSION_RATE + RU_CARD_COMMISSION_RATE) / dec!(100.0) * sell),
-                    );
-                }
-            }
-            if let Some(sell) = v.csh_sell_trf {
-                if sell > dec!(0.0) {
-                    rate_buy_idbank = Some(sell - (COMMISSION_RATE / dec!(100.0) * sell))
-                }
-            }
-            let from = v.iso_txt.clone();
-            [
-                Rate {
-                    from: from.clone(),
-                    to: to.clone(),
-                    rate_type: RateType::NoCash,
-                    buy: rate_buy,
-                    sell: rate_sell,
-                },
-                Rate {
-                    from: from.clone(),
-                    to: to.clone(),
-                    rate_type: RateType::NoCash,
-                    buy: rate_buy_idbank,
-                    sell: None,
-                },
-            ]
-        })
-        .flatten()
-        .collect();
-    Ok(rates)
+        .next()
+    else {
+        Err(Error::NoRates)?
+    };
+    const COMMISSION_RATE: Decimal = dec!(0.9);
+    const RU_CARD_COMMISSION_RATE: Decimal = dec!(0.3);
+    let mut rate_buy = None;
+    let mut rate_sell = None;
+    let mut rate_buy_idbank = None;
+    if let Some(buy) = rate.buy {
+        if buy > dec!(0.0) {
+            rate_buy = Some(buy - percent(COMMISSION_RATE, buy));
+        }
+    };
+    if let Some(sell) = rate.sell {
+        if sell > dec!(0.0) {
+            rate_sell = Some(sell + percent(COMMISSION_RATE + RU_CARD_COMMISSION_RATE, sell));
+        }
+    }
+    if let Some(sell) = rate.csh_sell_trf {
+        if sell > dec!(0.0) {
+            rate_buy_idbank = Some(sell - percent(COMMISSION_RATE, sell));
+        }
+    }
+    let from = rate.iso_txt.clone();
+    Ok(vec![
+        Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::NoCash,
+            buy: rate_buy,
+            sell: rate_sell,
+        },
+        Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::NoCash,
+            buy: rate_buy_idbank,
+            sell: None,
+        },
+    ])
+}
+
+fn percent(value: Decimal, from: Decimal) -> Decimal {
+    value / dec!(100.0) * from
 }
 
 async fn collect_mir(client: &Client) -> anyhow::Result<Vec<Rate>> {
     let resp: mir::Response = mir::Response::get_rates(&client).await?;
     let to = Currency::default();
-    let rates = resp
+    let Some(rate) = resp
         .content
         .iter()
         .filter(|v| v.currency.strcode == to)
-        .map(|v| {
-            let buy = if v.value_sell > dec!(0.0) {
-                Some(dec!(1.0) / v.value_sell)
-            } else {
-                None
-            };
-            let sell = if v.value_buy > dec!(0.0) {
-                Some(dec!(1.0) / v.value_buy)
-            } else {
-                None
-            };
-            let from = Currency::rub();
-            let new_rate = |rate_type: RateType| Rate {
-                from: from.clone(),
-                to: to.clone(),
-                rate_type,
-                buy,
-                sell,
-            };
-            [new_rate(RateType::NoCash), new_rate(RateType::Cash)]
-        })
-        .flatten()
-        .collect();
-    Ok(rates)
+        .next()
+    else {
+        Err(Error::NoRates)?
+    };
+    let buy = if rate.value_sell > dec!(0.0) {
+        Some(dec!(1.0) / rate.value_sell)
+    } else {
+        None
+    };
+    let sell = if rate.value_buy > dec!(0.0) {
+        Some(dec!(1.0) / rate.value_buy)
+    } else {
+        None
+    };
+    let new_rate = |rate_type: RateType| Rate {
+        from: Currency::rub(),
+        to: to.clone(),
+        rate_type,
+        buy,
+        sell,
+    };
+    Ok(vec![new_rate(RateType::NoCash), new_rate(RateType::Cash)])
 }
 
 async fn collect_sas(client: &Client) -> anyhow::Result<Vec<Rate>> {
@@ -665,11 +635,49 @@ async fn collect_moneytun(client: &Client) -> anyhow::Result<Vec<Rate>> {
     if resp.status_code != 0 {
         return Err(Error::NoRates)?;
     }
+    const MIN_COMMISSION_RATE: Decimal = dec!(1.25);
+    const DEFAULT_COMMISSION_RATE: Decimal = dec!(1.5);
+    let from = Currency::rub();
+    let to = Currency::default();
+    let buy = resp.calculation_result.exchange_rate2;
+    Ok(vec![
+        Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::NoCash,
+            buy: Some(buy - percent(MIN_COMMISSION_RATE, buy)),
+            sell: None,
+        },
+        Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::NoCash,
+            buy: Some(buy - percent(DEFAULT_COMMISSION_RATE, buy)),
+            sell: None,
+        },
+    ])
+}
+
+async fn collect_kwikpay(client: &Client) -> anyhow::Result<Vec<Rate>> {
+    let resp: lsoft::Response = kwikpay::Response::get_rates(&client).await?;
+    let rates = collect_lsoft(resp)?;
+    let from = Currency::rub();
+    let Some(rate) = rates
+        .iter()
+        .filter(|v| v.rate_type == RateType::Cash && v.from == from)
+        .next()
+    else {
+        Err(Error::NoRates)?
+    };
+    let Some(buy) = rate.buy else {
+        Err(Error::NoRates)?
+    };
+    const COMMISSION_RATE: Decimal = dec!(2.5);
     Ok(vec![Rate {
-        from: Currency::rub(),
+        from: from.clone(),
         to: Currency::default(),
         rate_type: RateType::NoCash,
-        buy: Some(resp.calculation_result.exchange_rate2),
+        buy: Some(buy - percent(COMMISSION_RATE, buy)),
         sell: None,
     }])
 }
@@ -807,6 +815,7 @@ mod tests {
         Ok(())
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_collect_moex() -> anyhow::Result<()> {
         let c = build_client()?;
@@ -861,6 +870,13 @@ mod tests {
     async fn test_collect_moneytun() -> anyhow::Result<()> {
         let c = build_client()?;
         collect(&c, Source::Moneytun).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_kwikpay() -> anyhow::Result<()> {
+        let c = build_client()?;
+        collect(&c, Source::Kwikpay).await?;
         Ok(())
     }
 }

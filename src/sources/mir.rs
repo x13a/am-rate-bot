@@ -1,5 +1,4 @@
-use crate::sources::utils::de_currency;
-use crate::sources::{Currency as SourcesCurrency, SourceSingleUrlTrait};
+use crate::sources::{de_currency, Currency as ModCurrency, JsonResponse};
 use rust_decimal::serde::arbitrary_precision;
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -39,7 +38,7 @@ pub struct Currency {
     pub last_publication_date: String,
     pub last_cpd: String,
     #[serde(deserialize_with = "de_currency")]
-    pub strcode: SourcesCurrency,
+    pub strcode: ModCurrency,
     pub name: String,
     pub country: String,
     pub global_id: u64,
@@ -48,7 +47,7 @@ pub struct Currency {
     pub updated: Option<String>,
 }
 
-impl SourceSingleUrlTrait for Response {
+impl JsonResponse for Response {
     fn url() -> String {
         API_URL.into()
     }

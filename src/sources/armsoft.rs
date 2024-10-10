@@ -1,5 +1,4 @@
-use crate::sources::utils::de_currency;
-use crate::sources::Currency;
+use crate::sources::{de_currency, Currency};
 use rust_decimal::serde::arbitrary_precision;
 use rust_decimal::Decimal;
 use serde::Deserialize;

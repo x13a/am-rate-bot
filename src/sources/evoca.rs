@@ -1,10 +1,10 @@
-use crate::sources::{RateType, SourceCashUrlTrait};
+use crate::sources::{RateType, RateTypeResponse};
 
 pub const API_URL: &str = "https://online.evocabank.am/InternetBank/Api/exchangeRates";
 
 pub struct Response;
 
-impl SourceCashUrlTrait for Response {
+impl RateTypeResponse for Response {
     fn url_cash() -> String {
         format!("{API_URL}/{}", RateType::Cash as u8)
     }

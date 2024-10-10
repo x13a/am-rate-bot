@@ -1,12 +1,11 @@
-use crate::sources::utils::de_currency;
-use crate::sources::{Currency, SourceSingleUrlTrait};
+use crate::sources::{de_currency, Currency, JsonResponse};
 use rust_decimal::serde::arbitrary_precision;
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://online.vtb.am/dbo/api/v1/currencies/rates";
 
-impl SourceSingleUrlTrait for Response {
+impl JsonResponse for Response {
     fn url() -> String {
         API_URL.into()
     }

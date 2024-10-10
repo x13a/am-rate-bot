@@ -1,7 +1,9 @@
-pub use lsoft::SourceAphenaTrait;
+pub use lsoft::AphenaResponse;
 use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
+use serde::{de, Deserialize, Deserializer};
 use std::fmt::Debug;
+use std::str::FromStr;
 
 pub mod acba;
 pub mod aeb;
@@ -22,6 +24,7 @@ pub mod hsbc;
 pub mod idbank;
 pub mod idpay;
 pub mod ineco;
+pub mod kwikpay;
 pub mod lsoft;
 pub mod mellat;
 pub mod mir;
@@ -29,10 +32,9 @@ pub mod moex;
 pub mod moneytun;
 pub mod sas;
 pub mod unibank;
-mod utils;
 pub mod vtb_am;
 
-pub trait SourceSingleUrlTrait {
+pub trait JsonResponse {
     fn url() -> String;
 
     #[allow(async_fn_in_trait)]
@@ -45,7 +47,7 @@ pub trait SourceSingleUrlTrait {
     }
 }
 
-pub trait SourceCashUrlTrait {
+pub trait RateTypeResponse {
     fn url_cash() -> String;
     fn url_no_cash() -> String;
 
@@ -115,6 +117,8 @@ pub enum Source {
     Avosend,
     #[strum(to_string = "Moneytun'", serialize = "moneytun")]
     Moneytun,
+    #[strum(to_string = "Kwikpay'", serialize = "kwikpay")]
+    Kwikpay,
 }
 
 impl Source {
@@ -135,6 +139,7 @@ impl Source {
             Self::Sas,
             Self::Avosend,
             Self::Moneytun,
+            Self::Kwikpay,
         ]
         .into()
     }
@@ -209,6 +214,44 @@ pub struct Rate {
     pub rate_type: RateType,
     pub buy: Option<Decimal>,
     pub sell: Option<Decimal>,
+}
+
+pub(crate) fn de_currency<'de, D>(deserializer: D) -> Result<Currency, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    Ok(Currency::new(s))
+}
+
+pub(crate) fn de_rate_type<'de, D>(deserializer: D) -> Result<RateType, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    let v = RateType::from_str(&s).map_err(de::Error::custom)?;
+    Ok(v)
+}
+
+pub(crate) fn de_empty_decimal<'de, D>(deserializer: D) -> Result<Option<Decimal>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    if s.is_empty() {
+        return Ok(None);
+    }
+    let f = Decimal::from_str(&s).map_err(de::Error::custom)?;
+    Ok(Some(f))
+}
+
+pub(crate) fn de_decimal<'de, D>(deserializer: D) -> Result<Decimal, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    let f = Decimal::from_str(&s).map_err(de::Error::custom)?;
+    Ok(f)
 }
 
 #[cfg(test)]
@@ -354,6 +397,7 @@ mod tests {
         Ok(())
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_moex() -> anyhow::Result<()> {
         let c = build_client()?;
@@ -370,7 +414,6 @@ mod tests {
         Ok(())
     }
 
-    #[ignore]
     #[tokio::test]
     async fn test_idpay() -> anyhow::Result<()> {
         let c = build_client()?;
@@ -411,6 +454,13 @@ mod tests {
     async fn test_moneytun() -> anyhow::Result<()> {
         let c = build_client()?;
         let _: moneytun::Response = moneytun::Response::get_rates(&c).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_kwikpay() -> anyhow::Result<()> {
+        let c = build_client()?;
+        let _: lsoft::Response = kwikpay::Response::get_rates(&c).await?;
         Ok(())
     }
 }

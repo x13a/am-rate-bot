@@ -1,5 +1,4 @@
-use crate::sources::utils::{de_currency, de_empty_decimal};
-use crate::sources::{Currency, SourceSingleUrlTrait};
+use crate::sources::{de_currency, de_empty_decimal, Currency, JsonResponse};
 use reqwest::Client;
 use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
@@ -62,7 +61,7 @@ pub struct Translation {
     pub value: String,
 }
 
-impl SourceSingleUrlTrait for Response {
+impl JsonResponse for Response {
     fn url() -> String {
         API_URL.into()
     }

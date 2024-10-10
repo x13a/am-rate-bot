@@ -1,5 +1,4 @@
-use crate::sources::utils::de_currency;
-use crate::sources::{Currency, RateType, SourceCashUrlTrait};
+use crate::sources::{de_currency, Currency, RateType, RateTypeResponse};
 use rust_decimal::serde::arbitrary_precision;
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -16,7 +15,7 @@ pub struct Response {
     pub result_message: String,
 }
 
-impl SourceCashUrlTrait for Response {
+impl RateTypeResponse for Response {
     fn url_cash() -> String {
         format!("{API_URL}={}", RateType::Cash as u8)
     }

@@ -1,5 +1,4 @@
-use crate::sources::utils::{de_currency, de_empty_decimal};
-use crate::sources::Currency;
+use crate::sources::{de_currency, de_empty_decimal, Currency};
 use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -33,7 +32,7 @@ pub mod request {
     }
 }
 
-pub trait SourceAphenaTrait {
+pub trait AphenaResponse {
     fn url() -> String;
 
     #[allow(async_fn_in_trait)]

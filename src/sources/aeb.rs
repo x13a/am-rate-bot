@@ -1,12 +1,11 @@
-use crate::sources::utils::{de_currency, de_rate_type};
-use crate::sources::{Currency, RateType, SourceSingleUrlTrait};
+use crate::sources::{de_currency, de_rate_type, Currency, JsonResponse, RateType};
 use rust_decimal::serde::arbitrary_precision_option;
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
 pub const API_URL: &str = "https://mobile.aeb.am/mobile-proxy-exchange-rates/rate-settings";
 
-impl SourceSingleUrlTrait for Response {
+impl JsonResponse for Response {
     fn url() -> String {
         API_URL.into()
     }

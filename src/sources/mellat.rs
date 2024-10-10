@@ -1,5 +1,4 @@
-use crate::sources::utils::de_currency;
-use crate::sources::{Currency, SourceSingleUrlTrait};
+use crate::sources::{de_currency, Currency, JsonResponse};
 use rust_decimal::serde::arbitrary_precision;
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -14,7 +13,7 @@ pub struct Response {
     pub result: Option<Result>,
 }
 
-impl SourceSingleUrlTrait for Response {
+impl JsonResponse for Response {
     fn url() -> String {
         API_URL.into()
     }

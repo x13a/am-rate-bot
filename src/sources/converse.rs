@@ -1,5 +1,4 @@
-use crate::sources::utils::de_currency;
-use crate::sources::{Currency as SourceCurrency, SourceSingleUrlTrait};
+use crate::sources::{de_currency, Currency as SourceCurrency, JsonResponse};
 use rust_decimal::serde::arbitrary_precision;
 use rust_decimal::Decimal;
 use serde::{de, Deserialize, Deserializer};
@@ -7,7 +6,7 @@ use serde_json::Value;
 
 pub const API_URL: &str = "https://sapi.conversebank.am/api/v2/currencyrates";
 
-impl SourceSingleUrlTrait for Response {
+impl JsonResponse for Response {
     fn url() -> String {
         API_URL.into()
     }

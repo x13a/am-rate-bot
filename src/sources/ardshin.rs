@@ -1,5 +1,4 @@
-use crate::sources::utils::de_currency;
-use crate::sources::{Currency as SourcesCurrency, SourceSingleUrlTrait};
+use crate::sources::{de_currency, Currency as ModCurrency, JsonResponse};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -12,7 +11,7 @@ pub struct Response {
     pub updated_at: String,
 }
 
-impl SourceSingleUrlTrait for Response {
+impl JsonResponse for Response {
     fn url() -> String {
         API_URL.into()
     }
@@ -39,7 +38,7 @@ pub struct Gold {
 #[derive(Debug, Deserialize)]
 pub struct Currency {
     #[serde(rename = "type", deserialize_with = "de_currency")]
-    pub curr_type: SourcesCurrency,
+    pub curr_type: ModCurrency,
     pub buy: Decimal,
     pub sell: Decimal,
     pub cb: String,

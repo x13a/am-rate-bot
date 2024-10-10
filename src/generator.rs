@@ -129,7 +129,7 @@ pub fn generate_from_to_table(
             paths.iter_mut().for_each(|v| v.1 = dec!(1.0) / v.1);
         }
         paths.sort_by(|a, b| sort(a.1, b.1));
-        if ![Source::IdPay].contains(src) {
+        if ![Source::IdPay, Source::Moneytun].contains(src) {
             let max_len = paths.iter().map(|v| v.0.len()).max().unwrap_or(3);
             for i in 2..max_len + 1 {
                 let pos = paths.iter().position(|v| v.0.len() == i);

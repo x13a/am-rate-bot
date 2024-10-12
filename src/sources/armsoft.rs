@@ -1,4 +1,4 @@
-use crate::sources::{de_currency, Currency};
+use crate::sources::{de, Currency};
 use rust_decimal::serde::arbitrary_precision;
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -12,13 +12,10 @@ pub struct Response {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct ExchangeRate {
-    #[serde(rename = "CBRate")]
-    pub cb_rate: f64,
-    #[serde(deserialize_with = "de_currency")]
+    #[serde(deserialize_with = "de::currency")]
     pub currency: Currency,
     #[serde(deserialize_with = "arbitrary_precision::deserialize")]
     pub purchase: Decimal,
-    pub rate_for: u32,
     #[serde(deserialize_with = "arbitrary_precision::deserialize")]
     pub sale: Decimal,
 }

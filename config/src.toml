@@ -1,0 +1,122 @@
+[acba]
+rates_url = "https://www.acbadigital.am/api/en/v2/rates"
+enabled = true
+
+[aeb]
+rates_url = "https://mobile.aeb.am/mobile-proxy-exchange-rates/rate-settings"
+enabled = true
+
+[ameria]
+rates_url = "https://online.ameriabank.am/InternetBank/Api/exchangeRates/"
+enabled = true
+
+[amio]
+rates_url = "https://internetbank.amiobank.am/InternetBank/api/exchangeRates/"
+enabled = true
+
+[ararat]
+rates_url = "https://direct.araratbank.am/InternetBank/Api/exchangeRates/"
+enabled = true
+
+[ardshin]
+rates_url = "https://website-api.ardshinbank.am/currency"
+enabled = true
+
+[arm_swiss]
+rates_url = "https://www.armswissbank.am/include/ajax.php"
+enabled = true
+
+[artsakh]
+rates_url = "https://m.artsakhbank.am:9443/get_ART.php"
+enabled = true
+req.id = "6"
+
+[avosend]
+rates_url = "https://avosend.com/api/comission.php"
+enabled = true
+
+req.country_code_from = "ru"
+req.country_id_from = 643
+req.country_code_to = "am"
+req.country_id_to = 51
+# rub
+req.currency_id_from = 643
+# amd
+req.currency_id_to = 51
+req.summ_send = 10000
+req.direction = "from"
+
+[byblos]
+rates_url = "https://online.byblosbankarmenia.am/InternetBank/api/exchangeRates/"
+enabled = true
+
+[cb_am]
+rates_url = "https://api.cba.am/exchangerates.asmx"
+enabled = true
+
+[converse]
+rates_url = "https://sapi.conversebank.am/api/v2/currencyrates"
+enabled = true
+
+[evoca]
+rates_url = "https://online.evocabank.am/InternetBank/Api/exchangeRates/"
+enabled = true
+
+[fast]
+rates_url = "https://mobileapi.fcc.am/FCBank.Mobile.Api_V2/api/publicInfo/getRates?langID=2&payType="
+enabled = true
+
+[hsbc]
+rates_url = "https://www.hsbc.am/en-am/help/rates/"
+enabled = true
+
+[idbank]
+rates_url = "https://www.idbanking.am/api/MyInfo/getCurrencyRateMobile"
+enabled = true
+
+[ineco]
+rates_url = "https://www.inecobank.am/api/rates"
+enabled = true
+
+[mellat]
+rates_url = "https://api.mellatbank.am/api/v1/rate/list"
+enabled = true
+
+[mir]
+rates_url = "https://api-user.vamprivet.ru/backend/api/v2/currencies/rates"
+enabled = true
+
+[moex]
+rates_url = "https://invest-public-api.tinkoff.ru/rest/tinkoff.public.invest.api.contract.v1.MarketDataService/GetOrderBook"
+enabled = true
+
+# AMDRUB_TOM
+req.figi = "BBG0013J7V24"
+req.depth = 1
+
+[sas]
+rates_url = "https://www.sas.am/app/"
+enabled = true
+
+[unibank]
+rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
+enabled = true
+req.id = "5"
+
+[vtb_am]
+rates_url = "https://online.vtb.am/dbo/api/v1/currencies/rates"
+enabled = true
+
+[idpay]
+rates_url = "https://www.idbanking.am/api/MyInfo/getCurrencyRateMobile"
+enabled = true
+commission_rate = 0.9
+# idpay > ru_card
+commission_rate_ru_card = 0.3
+
+[kwikpay]
+rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
+enabled = true
+# card
+commission_rate = 2.5
+req.id = "5"

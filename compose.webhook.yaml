@@ -7,6 +7,7 @@ services:
       - './config/bot.env'
     volumes:
       - './certs/cert.pem:/certs/cert.pem:ro'
+      - './config/src.toml:/config/src.toml:ro'
     networks:
       - 'nginx-network'
     expose:

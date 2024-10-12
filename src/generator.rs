@@ -129,7 +129,7 @@ pub fn generate_from_to_table(
             paths.iter_mut().for_each(|v| v.1 = dec!(1.0) / v.1);
         }
         paths.sort_by(|a, b| sort(a.1, b.1));
-        if ![Source::IdPay, Source::Moneytun].contains(src) {
+        if ![Source::IdPay].contains(src) {
             let max_len = paths.iter().map(|v| v.0.len()).max().unwrap_or(3);
             for i in 2..max_len + 1 {
                 let pos = paths.iter().position(|v| v.0.len() == i);
@@ -287,7 +287,7 @@ pub fn generate_src_table(
 mod tests {
     use super::*;
     use crate::collector::{collect_all, filter_collection, parse_acba};
-    use crate::sources::acba;
+    use crate::sources::{acba, Config};
     use reqwest::Client;
     use std::time::Duration;
     use strum::IntoEnumIterator;
@@ -298,6 +298,11 @@ mod tests {
         reqwest::ClientBuilder::new()
             .timeout(Duration::from_secs(TIMEOUT))
             .build()
+    }
+
+    fn load_src_config() -> anyhow::Result<Config> {
+        let cfg = toml::from_str(include_str!("../config/src.toml"))?;
+        Ok(cfg)
     }
 
     const ACBA_DATA: &str = r#"{
@@ -518,7 +523,8 @@ mod tests {
     #[tokio::test]
     async fn test_generate_from_to_table() -> anyhow::Result<()> {
         let client = build_client()?;
-        let results = collect_all(&client).await;
+        let config = load_src_config()?;
+        let results = collect_all(&client, &config).await;
         let rates = filter_collection(results);
         let test_cases = get_test_cases();
         for (from, to) in test_cases {
@@ -533,7 +539,8 @@ mod tests {
     #[tokio::test]
     async fn test_generate_src_table() -> anyhow::Result<()> {
         let client = build_client()?;
-        let results = collect_all(&client).await;
+        let config = load_src_config()?;
+        let results = collect_all(&client, &config).await;
         let rates = filter_collection(results);
         for src in Source::iter() {
             let _ = generate_src_table(src, &rates, RateType::NoCash);

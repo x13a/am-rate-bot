@@ -242,13 +242,11 @@ enum Command {
     Start,
 }
 
-pub async fn run(db: Arc<Storage>, opts: Opts) {
+pub async fn run(db: Arc<Storage>, opts: Opts) -> anyhow::Result<()> {
     let bot = teloxide::Bot::from_env()
         .throttle(Limits::default())
         .parse_mode(ParseMode::Html);
-    bot.set_my_commands(Command::bot_commands())
-        .await
-        .expect("panic");
+    bot.set_my_commands(Command::bot_commands()).await?;
     let handler = dptree::entry().branch(
         Update::filter_message()
             .filter_command::<Command>()
@@ -259,10 +257,7 @@ pub async fn run(db: Arc<Storage>, opts: Opts) {
         .enable_ctrlc_handler()
         .default_handler(|_| async move {})
         .build();
-    let is_polling = env::var(ENV_POLLING)
-        .expect("panic")
-        .parse()
-        .expect("panic");
+    let is_polling = env::var(ENV_POLLING)?.parse()?;
     if is_polling {
         dispatcher.dispatch().await;
     } else {
@@ -284,14 +279,14 @@ pub async fn run(db: Arc<Storage>, opts: Opts) {
                 secret_token: None,
             },
         )
-        .await
-        .expect("panic");
+        .await?;
         let error_handler =
             LoggingErrorHandler::with_custom_text("An error from the update listener");
         dispatcher
             .dispatch_with_listener(listener, error_handler)
             .await;
     }
+    Ok(())
 }
 
 async fn command(

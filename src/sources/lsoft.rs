@@ -1,79 +1,10 @@
-use crate::sources::{de_currency, de_empty_decimal, Currency};
+use crate::sources::{de, Currency, SourceConfigTrait};
 use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
-pub mod request {
-    use serde::Serialize;
-
-    #[derive(Serialize)]
-    #[serde(rename = "request")]
-    pub struct Request {
-        #[serde(rename = "@client")]
-        pub client: String,
-        #[serde(rename = "@device")]
-        pub device: String,
-        #[serde(rename = "@handler")]
-        pub handler: String,
-        #[serde(rename = "@lang")]
-        pub lang: String,
-        #[serde(rename = "@operation")]
-        pub operation: String,
-        pub accesstoken: String,
-        pub id: String,
-        #[serde(rename = "getCurrencyListParameters")]
-        pub get_currency_list_parameters: GetCurrencyListParameters,
-        pub userid: String,
-    }
-
-    #[derive(Serialize)]
-    pub struct GetCurrencyListParameters {
-        pub currency: String,
-    }
-}
-
-pub trait AphenaResponse {
-    fn url() -> String;
-
-    #[allow(async_fn_in_trait)]
-    async fn get_rates<T>(c: &reqwest::Client) -> anyhow::Result<T>
-    where
-        T: DeserializeOwned,
-    {
-        let req_body = request::Request {
-            client: "mobile".into(),
-            device: "android".into(),
-            handler: "aphena".into(),
-            lang: "2".into(),
-            operation: "getCurrencyList".into(),
-            accesstoken: "".into(),
-            id: "5".into(),
-            get_currency_list_parameters: request::GetCurrencyListParameters {
-                currency: "".into(),
-            },
-            userid: "".into(),
-        };
-        let body = c
-            .post(Self::url())
-            .body(quick_xml::se::to_string(&req_body).expect("xml serialization failed"))
-            .send()
-            .await?
-            .text()
-            .await?;
-        let resp: T = quick_xml::de::from_str(&body)?;
-        Ok(resp)
-    }
-}
-
 #[derive(Debug, Deserialize)]
 pub struct Response {
-    #[serde(rename = "@operation")]
-    pub operation: String,
-    #[serde(rename = "@handler")]
-    pub handler: String,
-    pub parentid: u64,
-    #[serde(rename = "Id")]
-    pub id: u64,
     #[serde(rename = "getCurrencyList")]
     pub get_currency_list: GetCurrencyList,
 }
@@ -81,25 +12,22 @@ pub struct Response {
 #[derive(Debug, Deserialize)]
 pub struct GetCurrencyList {
     #[serde(rename = "CurrencyList", default)]
-    pub currency_list: Option<Vec<CurrencyList>>,
-    #[serde(rename = "errorCode")]
-    pub error_code: i32,
+    pub currency_list: Vec<CurrencyList>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CurrencyList {
-    #[serde(rename = "externalId", deserialize_with = "de_currency")]
+    #[serde(rename = "externalId", deserialize_with = "de::currency")]
     pub external_id: Currency,
-    pub cb: f64,
-    #[serde(deserialize_with = "de_empty_decimal")]
+    #[serde(deserialize_with = "de::empty_decimal")]
     pub sell: Option<Decimal>,
-    #[serde(deserialize_with = "de_empty_decimal")]
+    #[serde(deserialize_with = "de::empty_decimal")]
     pub buy: Option<Decimal>,
     pub trf30: Trf30,
     pub trf31: Trf31,
-    #[serde(rename = "CshSell", deserialize_with = "de_empty_decimal")]
+    #[serde(rename = "CshSell", deserialize_with = "de::empty_decimal")]
     pub csh_sell: Option<Decimal>,
-    #[serde(rename = "CshBuy", deserialize_with = "de_empty_decimal")]
+    #[serde(rename = "CshBuy", deserialize_with = "de::empty_decimal")]
     pub csh_buy: Option<Decimal>,
 }
 
@@ -108,3 +36,86 @@ pub struct Trf30;
 
 #[derive(Debug, Deserialize)]
 pub struct Trf31;
+
+pub mod request {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Serialize, Deserialize, Clone, Default)]
+    #[serde(rename = "request", default)]
+    pub struct Request {
+        #[serde(rename(serialize = "@client"))]
+        pub client: String,
+        #[serde(rename(serialize = "@device"))]
+        pub device: String,
+        #[serde(rename(serialize = "@handler"))]
+        pub handler: String,
+        #[serde(rename(serialize = "@lang"))]
+        pub lang: String,
+        #[serde(rename(serialize = "@operation"))]
+        pub operation: String,
+        pub accesstoken: String,
+        pub id: String,
+        #[serde(rename(serialize = "getCurrencyListParameters"))]
+        pub get_currency_list_parameters: GetCurrencyListParameters,
+        pub userid: String,
+    }
+
+    #[derive(Debug, Serialize, Deserialize, Clone, Default)]
+    pub struct GetCurrencyListParameters {
+        pub currency: String,
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Config {
+    pub rates_url: String,
+    pub enabled: bool,
+    pub req: request::Request,
+}
+
+impl SourceConfigTrait for Config {
+    fn rates_url(&self) -> String {
+        self.rates_url.clone()
+    }
+}
+
+pub trait LSoftRequest {
+    fn req(&self) -> request::Request;
+}
+
+impl LSoftRequest for Config {
+    fn req(&self) -> request::Request {
+        self.req.clone()
+    }
+}
+
+pub trait LSoftResponse {
+    #[allow(async_fn_in_trait)]
+    async fn get_rates<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
+    where
+        T1: DeserializeOwned,
+        T2: SourceConfigTrait + LSoftRequest,
+    {
+        let req = config.req();
+        let req_data = request::Request {
+            client: "mobile".into(),
+            device: "android".into(),
+            handler: "aphena".into(),
+            lang: "1".into(),
+            operation: "getCurrencyList".into(),
+            accesstoken: "".into(),
+            id: req.id.clone(),
+            get_currency_list_parameters: Default::default(),
+            userid: "".into(),
+        };
+        let body = client
+            .post(config.rates_url())
+            .body(quick_xml::se::to_string(&req_data).expect("xml serialization failed"))
+            .send()
+            .await?
+            .text()
+            .await?;
+        let resp: T1 = quick_xml::de::from_str(&body)?;
+        Ok(resp)
+    }
+}

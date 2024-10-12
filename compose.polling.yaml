@@ -5,3 +5,5 @@ services:
     container_name: 'am-rate-bot'
     env_file:
       - './config/bot.env'
+    volumes:
+      - './config/src.toml:/config/src.toml:ro'

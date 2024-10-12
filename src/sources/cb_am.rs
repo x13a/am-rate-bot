@@ -1,18 +1,11 @@
-use crate::sources::{de_currency, de_decimal, Currency};
+pub use crate::sources::SourceConfig as Config;
+use crate::sources::{de, Currency, SourceConfigTrait};
 use rust_decimal::Decimal;
 use serde::Deserialize;
-
-pub const API_URL: &str = "https://api.cba.am/exchangerates.asmx";
 
 #[derive(Deserialize, Debug)]
 #[serde(rename = "SoapEnvelope")]
 pub struct Response {
-    #[serde(rename = "@xmlns:soap")]
-    pub xmlns_soap: String,
-    #[serde(rename = "@xmlns:xsi")]
-    pub xmlns_xsi: String,
-    #[serde(rename = "@xmlns:xsd")]
-    pub xmlns_xsd: String,
     #[serde(rename = "Body")]
     pub soap_body: SoapBody,
 }
@@ -26,24 +19,13 @@ pub struct SoapBody {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct ExchangeRatesLatestResponse {
-    #[serde(rename = "@xmlns")]
-    pub xmlns: String,
     pub exchange_rates_latest_result: ExchangeRatesLatestResult,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct ExchangeRatesLatestResult {
-    pub current_date: String,
-    pub next_available_date: NextAvailableDate,
-    pub previous_available_date: String,
     pub rates: Rates,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct NextAvailableDate {
-    #[serde(rename = "@nil")]
-    pub xsi_nil: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -55,12 +37,10 @@ pub struct Rates {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct ExchangeRate {
-    #[serde(rename = "ISO", deserialize_with = "de_currency")]
+    #[serde(rename = "ISO", deserialize_with = "de::currency")]
     pub iso: Currency,
-    pub amount: u32,
-    #[serde(deserialize_with = "de_decimal")]
+    #[serde(deserialize_with = "de::decimal")]
     pub rate: Decimal,
-    pub difference: String,
 }
 
 pub mod request {
@@ -68,7 +48,7 @@ pub mod request {
 
     #[derive(Serialize)]
     #[serde(rename = "soap12:Envelope")]
-    pub struct Soap12Envelope {
+    pub struct Request {
         #[serde(rename = "@xmlns:xsi")]
         pub xmlns_xsi: String,
         #[serde(rename = "@xmlns:xsd")]
@@ -93,12 +73,11 @@ pub mod request {
 }
 
 impl Response {
-    pub fn url() -> String {
-        API_URL.into()
-    }
-
-    pub async fn get_rates(c: &reqwest::Client) -> anyhow::Result<Self> {
-        let req_body = request::Soap12Envelope {
+    pub async fn get_rates<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Self>
+    where
+        T: SourceConfigTrait,
+    {
+        let req_data = request::Request {
             xmlns_xsi: "http://www.w3.org/2001/XMLSchema-instance".into(),
             xmlns_xsd: "http://www.w3.org/2001/XMLSchema".into(),
             xmlns_soap12: "http://www.w3.org/2003/05/soap-envelope".into(),
@@ -108,13 +87,13 @@ impl Response {
                 },
             },
         };
-        let xml = c
-            .post(Self::url())
+        let xml = client
+            .post(config.rates_url())
             .header(
                 reqwest::header::CONTENT_TYPE,
                 "application/soap+xml; charset=utf-8",
             )
-            .body(quick_xml::se::to_string(&req_body).expect("xml serialization failed"))
+            .body(quick_xml::se::to_string(&req_data).expect("xml serialization failed"))
             .send()
             .await?
             .text()

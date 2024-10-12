@@ -1,32 +1,20 @@
-use crate::sources::{de_currency, Currency, JsonResponse};
+pub use crate::sources::SourceConfig as Config;
+use crate::sources::{de, Currency, JsonResponse};
 use rust_decimal::serde::arbitrary_precision_option;
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
-pub const API_URL: &str = "https://www.inecobank.am/api/rates";
-
 #[derive(Debug, Deserialize)]
 pub struct Response {
-    pub success: bool,
-    #[serde(default)]
-    pub items: Option<Vec<Item>>,
-}
-
-impl JsonResponse for Response {
-    fn url() -> String {
-        API_URL.into()
-    }
+    pub items: Vec<Item>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Item {
-    #[serde(deserialize_with = "de_currency")]
+    #[serde(deserialize_with = "de::currency")]
     pub code: Currency,
     pub cash: Rate,
     pub cashless: Rate,
-    pub online: Rate,
-    pub cb: Rate,
-    pub card: Rate,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,3 +24,5 @@ pub struct Rate {
     #[serde(deserialize_with = "arbitrary_precision_option::deserialize")]
     pub sell: Option<Decimal>,
 }
+
+impl JsonResponse for Response {}

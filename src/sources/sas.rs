@@ -1,8 +1,7 @@
-use crate::sources::{Currency, Error, Rate, RateType};
+pub use crate::sources::SourceConfig as Config;
+use crate::sources::{Currency, Error, Rate, RateType, SourceConfigTrait};
 use select::document::Document;
 use select::predicate::Class;
-
-pub const API_URL: &str = "https://www.sas.am/app/";
 
 #[derive(Debug)]
 pub struct Response {
@@ -10,12 +9,11 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn url() -> String {
-        API_URL.into()
-    }
-
-    pub async fn get_rates(c: &reqwest::Client) -> anyhow::Result<Self> {
-        let html = c.get(Self::url()).send().await?.text().await?;
+    pub async fn get_rates<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Self>
+    where
+        T: SourceConfigTrait,
+    {
+        let html = client.get(config.rates_url()).send().await?.text().await?;
         let mut rates = vec![];
         let document = Document::from(html.as_str());
         let exchange_table = document

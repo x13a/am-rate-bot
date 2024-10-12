@@ -1,23 +1,12 @@
-use crate::sources::{de_currency, Currency as ModCurrency, JsonResponse};
+pub use crate::sources::SourceConfig as Config;
+use crate::sources::{de, Currency, JsonResponse};
 use rust_decimal::Decimal;
 use serde::Deserialize;
-
-pub const API_URL: &str = "https://www.acbadigital.am/api/en/v2/rates";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Response {
-    pub description: Option<String>,
-    pub result_code: i32,
-    #[serde(default)]
-    pub result: Option<Result>,
-    pub result_code_description: String,
-}
-
-impl JsonResponse for Response {
-    fn url() -> String {
-        API_URL.into()
-    }
+    pub result: Result,
 }
 
 #[derive(Debug, Deserialize)]
@@ -27,12 +16,9 @@ pub struct Result {
 
 #[derive(Debug, Deserialize)]
 pub struct Rates {
-    pub last_update_date: String,
     pub cash: Vec<Rate>,
     pub non_cash: Vec<Rate>,
-    pub card: Vec<Rate>,
     pub cross: Vec<CrossRate>,
-    pub currencies: Vec<Currency>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -40,10 +26,8 @@ pub struct Rates {
 pub struct Rate {
     pub buy: Decimal,
     pub sell: Decimal,
-    #[serde(rename = "CB")]
-    pub cb: String,
-    #[serde(deserialize_with = "de_currency")]
-    pub currency: ModCurrency,
+    #[serde(deserialize_with = "de::currency")]
+    pub currency: Currency,
 }
 
 #[derive(Debug, Deserialize)]
@@ -54,9 +38,4 @@ pub struct CrossRate {
     pub currency: String,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct Currency {
-    pub key: String,
-    pub value: String,
-}
+impl JsonResponse for Response {}

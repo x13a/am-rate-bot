@@ -1,33 +1,51 @@
+use am_rate_bot::sources::Config;
 use am_rate_bot::{bot, collector, Opts};
 use std::sync::Arc;
 use std::time::Duration;
+use std::{env, fs};
+
+const ENV_SRC_CONFIG: &str = "SRC_CONFIG";
+const ENV_REQWEST_TIMEOUT: &str = "REQWEST_TIMEOUT";
+const ENV_UPDATE_INTERVAL: &str = "UPDATE_INTERVAL";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    let opts: Opts = argh::from_env();
+    let opts = get_opts()?;
     let db = bot::Storage::new();
     let task1 = async {
         let db = db.clone();
-        collect(db, opts).await;
+        collect(db, opts).await.expect("panic");
     };
     let task2 = async {
         let db = db.clone();
-        bot::run(db, opts).await;
+        bot::run(db, opts).await.expect("panic");
     };
     tokio::join!(task1, task2);
     Ok(())
 }
 
-async fn collect(db: Arc<bot::Storage>, opts: Opts) {
-    let client = reqwest::ClientBuilder::new()
-        .timeout(Duration::from_secs(opts.timeout))
-        .build()
-        .expect("panic");
+fn get_opts() -> anyhow::Result<Opts> {
+    let opts = Opts {
+        reqwest_timeout: env::var(ENV_REQWEST_TIMEOUT)?.parse()?,
+        update_interval: env::var(ENV_UPDATE_INTERVAL)?.parse()?,
+    };
+    Ok(opts)
+}
 
+fn load_src_config() -> anyhow::Result<Config> {
+    let cfg = toml::from_str(fs::read_to_string(env::var(ENV_SRC_CONFIG)?)?.as_str())?;
+    Ok(cfg)
+}
+
+async fn collect(db: Arc<bot::Storage>, opts: Opts) -> anyhow::Result<()> {
+    let client = reqwest::ClientBuilder::new()
+        .timeout(Duration::from_secs(opts.reqwest_timeout))
+        .build()?;
+    let cfg = load_src_config()?;
     let get_rates = || async {
         log::debug!("get rates");
-        let results = collector::collect_all(&client).await;
+        let results = collector::collect_all(&client, &cfg).await;
         let rates = collector::filter_collection(results);
         db.clear_cache().await;
         db.set_rates(&rates).await;
@@ -44,4 +62,5 @@ async fn collect(db: Arc<bot::Storage>, opts: Opts) {
             _ = &mut sleep => {}
         }
     }
+    Ok(())
 }

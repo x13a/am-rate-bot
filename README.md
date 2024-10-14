@@ -2,7 +2,7 @@
 
 Armenia currency exchange rates telegram bot.
 
-<img width="470" alt="am-rate-bot" src="https://github.com/user-attachments/assets/67903e8c-d089-4ff5-bc46-3405d59f0b08">
+<img width="467" alt="Screenshot 2024-10-14 at 16 04 27" src="https://github.com/user-attachments/assets/3f0269c5-354d-4b61-a772-d3748db6636c">
 
 
 ## Setup

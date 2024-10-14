@@ -99,8 +99,8 @@ async fn collect(client: &Client, config: &Config, src: Source) -> anyhow::Resul
         Source::Ararat => collect_ararat(client, &config.ararat).await?,
         Source::IdPay => collect_idpay(client, &config.idpay).await?,
         Source::Mir => collect_mir(client, &config.mir).await?,
-        Source::Sas => collect_sas(client, &config.sas).await?,
-        Source::Hsbc => collect_hsbc(client, &config.hsbc).await?,
+        Source::SAS => collect_sas(client, &config.sas).await?,
+        Source::HSBC => collect_hsbc(client, &config.hsbc).await?,
         Source::Avosend => collect_avosend(client, &config.avosend).await?,
         Source::Kwikpay => collect_kwikpay(client, &config.kwikpay).await?,
     };
@@ -369,21 +369,7 @@ async fn collect_aeb(client: &Client, config: &aeb::Config) -> anyhow::Result<Ve
 
 async fn collect_vtb_am(client: &Client, config: &vtb_am::Config) -> anyhow::Result<Vec<Rate>> {
     let resp: vtb_am::Response = vtb_am::Response::get_rates(client, config).await?;
-    let rates = resp
-        .items
-        .iter()
-        .filter(|v| v.category_id == "internaltransfer")
-        .flat_map(|v| v.rates.items.iter())
-        .filter(|v| v.buy.is_some() && v.sell.is_some())
-        .map(|v| Rate {
-            from: v.base.currency.clone(),
-            to: v.target.currency.clone(),
-            rate_type: RateType::NoCash,
-            buy: v.sell.as_ref().map(|v| v.min),
-            sell: v.buy.as_ref().map(|v| v.min),
-        })
-        .collect();
-    Ok(rates)
+    Ok(resp.rates)
 }
 
 async fn collect_artsakh(client: &Client, config: &artsakh::Config) -> anyhow::Result<Vec<Rate>> {
@@ -849,7 +835,7 @@ mod tests {
     async fn test_collect_sas() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_src_config()?;
-        collect(&client, &config, Source::Sas).await?;
+        collect(&client, &config, Source::SAS).await?;
         Ok(())
     }
 
@@ -857,7 +843,7 @@ mod tests {
     async fn test_collect_hsbc() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_src_config()?;
-        collect(&client, &config, Source::Hsbc).await?;
+        collect(&client, &config, Source::HSBC).await?;
         Ok(())
     }
 

@@ -123,7 +123,7 @@ impl Config {
             Source::Converse => self.converse.enabled,
             Source::Evoca => self.evoca.enabled,
             Source::Fast => self.fast.enabled,
-            Source::Hsbc => self.hsbc.enabled,
+            Source::HSBC => self.hsbc.enabled,
             Source::IdBank => self.idbank.enabled,
             Source::IdPay => self.idpay.enabled,
             Source::Ineco => self.ineco.enabled,
@@ -131,7 +131,7 @@ impl Config {
             Source::Mellat => self.mellat.enabled,
             Source::Mir => self.mir.enabled,
             Source::MoEx => self.moex.enabled,
-            Source::Sas => self.sas.enabled,
+            Source::SAS => self.sas.enabled,
             Source::UniBank => self.unibank.enabled,
             Source::VtbAm => self.vtb_am.enabled,
         }
@@ -211,9 +211,8 @@ pub mod de {
 )]
 #[strum(ascii_case_insensitive)]
 pub enum Source {
-    #[strum(to_string = "CBAM")]
     CbAm,
-    #[strum(to_string = "MOEX'", serialize = "moex")]
+    #[strum(to_string = "MoEx'", serialize = "moex")]
     MoEx,
     Acba,
     Ameria,
@@ -229,19 +228,15 @@ pub enum Source {
     VtbAm,
     Artsakh,
     UniBank,
-    #[strum(to_string = "AMIO")]
     Amio,
     Byblos,
     IdBank,
     Ararat,
     #[strum(to_string = "IdPay'", serialize = "idpay")]
     IdPay,
-    #[strum(to_string = "MIR")]
     Mir,
-    #[strum(to_string = "SAS")]
-    Sas,
-    #[strum(to_string = "HSBC")]
-    Hsbc,
+    SAS,
+    HSBC,
     #[strum(to_string = "Avosend'", serialize = "avosend")]
     Avosend,
     #[strum(to_string = "Kwikpay'", serialize = "kwikpay")]
@@ -263,7 +258,7 @@ impl Source {
             Self::MoEx,
             Self::IdPay,
             Self::Mir,
-            Self::Sas,
+            Self::SAS,
             Self::Avosend,
             Self::Kwikpay,
         ]

@@ -14,12 +14,12 @@ impl Response {
         T: SourceConfigTrait,
     {
         let html = client.get(config.rates_url()).send().await?.text().await?;
-        let mut rates = vec![];
         let document = Document::from(html.as_str());
         let exchange_table = document
             .find(Class("exchange-table"))
             .next()
             .ok_or(Error::Html)?;
+        let mut rates = vec![];
         for row in exchange_table.find(Class("exchange-table__row")).skip(1) {
             let mut cells = row.find(Class("exchange-table__cell-content"));
             let currency = cells.next().ok_or(Error::Html)?.text();

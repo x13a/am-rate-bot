@@ -104,7 +104,7 @@ enabled = true
 req.id = "5"
 
 [vtb_am]
-rates_url = "https://online.vtb.am/dbo/api/v1/currencies/rates"
+rates_url = "https://vtb.am/ru/currency"
 enabled = true
 
 [idpay]

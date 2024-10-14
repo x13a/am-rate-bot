@@ -14,7 +14,6 @@ impl Response {
         T: SourceConfigTrait,
     {
         let html = client.get(config.rates_url()).send().await?.text().await?;
-        let mut rates = vec![];
         let document = Document::from(html.as_str());
         let table = document
             .find(Attr("id", "content_main_basicTable_1"))
@@ -24,6 +23,7 @@ impl Response {
             .filter(|v| v.attr("class").is_some_and(|s| s == "desktop"))
             .next()
             .ok_or(Error::Html)?;
+        let mut rates = vec![];
         for row in table
             .find(Name("tbody"))
             .next()

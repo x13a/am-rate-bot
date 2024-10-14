@@ -1,7 +1,7 @@
 use crate::sources::{
     acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, avosend, byblos, cb_am,
     converse, evoca, fast, hsbc, idbank, idpay, ineco, kwikpay, lsoft, mellat, mir, moex, sas,
-    unibank, vtb_am, Config, Currency, JsonResponse, LSoftResponse, Rate, RateType,
+    unibank, unistream, vtb_am, Config, Currency, JsonResponse, LSoftResponse, Rate, RateType,
     RateTypeJsonResponse, Source,
 };
 use reqwest::Client;
@@ -103,6 +103,7 @@ async fn collect(client: &Client, config: &Config, src: Source) -> anyhow::Resul
         Source::HSBC => collect_hsbc(client, &config.hsbc).await?,
         Source::Avosend => collect_avosend(client, &config.avosend).await?,
         Source::Kwikpay => collect_kwikpay(client, &config.kwikpay).await?,
+        Source::UniStream => collect_unistream(client, &config.unistream).await?,
     };
     Ok(rates)
 }
@@ -533,7 +534,7 @@ async fn collect_idpay(client: &Client, config: &idpay::Config) -> anyhow::Resul
         if sell > dec!(0.0) {
             rate_sell = Some(
                 sell + percent(
-                    config.commission_rate + config.commission_rate_ru_card,
+                    config.commission_rate + config.commission_rate_to_ru_card,
                     sell,
                 ),
             );
@@ -640,6 +641,39 @@ async fn collect_kwikpay(client: &Client, config: &kwikpay::Config) -> anyhow::R
         buy: Some(buy - percent(config.commission_rate, buy)),
         sell: None,
     }])
+}
+
+async fn collect_unistream(
+    client: &Client,
+    config: &unistream::Config,
+) -> anyhow::Result<Vec<Rate>> {
+    let resp: lsoft::Response = unistream::Response::get_rates(client, config).await?;
+    let rates = collect_lsoft(resp)?;
+    let from = Currency::rub();
+    let Some(rate) = rates
+        .iter()
+        .filter(|v| v.rate_type == RateType::Cash && v.from == from)
+        .next()
+    else {
+        Err(Error::NoRates)?
+    };
+    let Some(buy) = rate.buy else {
+        Err(Error::NoRates)?
+    };
+    let results = [
+        config.commission_rate_from_bank,
+        config.commission_rate_from_any_card,
+    ]
+    .iter()
+    .map(|v| Rate {
+        from: from.clone(),
+        to: Currency::default(),
+        rate_type: RateType::NoCash,
+        buy: Some(buy - percent(*v, buy)),
+        sell: None,
+    })
+    .collect();
+    Ok(results)
 }
 
 #[cfg(test)]
@@ -860,6 +894,14 @@ mod tests {
         let client = build_client()?;
         let config = load_src_config()?;
         collect(&client, &config, Source::Kwikpay).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_unistream() -> anyhow::Result<()> {
+        let client = build_client()?;
+        let config = load_src_config()?;
+        collect(&client, &config, Source::UniStream).await?;
         Ok(())
     }
 }

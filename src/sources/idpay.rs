@@ -8,7 +8,7 @@ pub struct Config {
     pub rates_url: String,
     pub enabled: bool,
     pub commission_rate: Decimal,
-    pub commission_rate_ru_card: Decimal,
+    pub commission_rate_to_ru_card: Decimal,
 }
 
 impl SourceConfigTrait for Config {

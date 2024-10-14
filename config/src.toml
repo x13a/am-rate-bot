@@ -103,6 +103,14 @@ rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
 enabled = true
 req.id = "5"
 
+[unistream]
+rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
+enabled = true
+# card
+commission_rate_from_bank = 0.9
+commission_rate_from_any_card = 2.5
+req.id = "5"
+
 [vtb_am]
 rates_url = "https://vtb.am/ru/currency"
 enabled = true
@@ -112,7 +120,7 @@ rates_url = "https://www.idbanking.am/api/MyInfo/getCurrencyRateMobile"
 enabled = true
 commission_rate = 0.9
 # idpay > ru_card
-commission_rate_ru_card = 0.3
+commission_rate_to_ru_card = 0.3
 
 [kwikpay]
 rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"

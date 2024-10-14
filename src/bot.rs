@@ -433,13 +433,7 @@ async fn command(
         }
         Command::List => {
             let mut srcs = Source::iter()
-                .map(|v| {
-                    let mut s = v.to_string().to_lowercase();
-                    for c in ["'", " "] {
-                        s = s.replace(c, "");
-                    }
-                    s
-                })
+                .map(|v| v.to_string().to_lowercase())
                 .collect::<Vec<_>>();
             srcs.sort();
             bot.send_message(msg.chat.id, srcs.join(", ")).await?;

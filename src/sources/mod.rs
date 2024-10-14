@@ -30,6 +30,7 @@ pub mod mir;
 pub mod moex;
 pub mod sas;
 pub mod unibank;
+pub mod unistream;
 pub mod vtb_am;
 
 pub trait SourceConfigTrait {
@@ -101,6 +102,7 @@ pub struct Config {
     pub moex: moex::Config,
     pub sas: sas::Config,
     pub unibank: unibank::Config,
+    pub unistream: unistream::Config,
     pub vtb_am: vtb_am::Config,
     pub idpay: idpay::Config,
     pub kwikpay: kwikpay::Config,
@@ -133,6 +135,7 @@ impl Config {
             Source::MoEx => self.moex.enabled,
             Source::SAS => self.sas.enabled,
             Source::UniBank => self.unibank.enabled,
+            Source::UniStream => self.unistream.enabled,
             Source::VtbAm => self.vtb_am.enabled,
         }
     }
@@ -212,7 +215,6 @@ pub mod de {
 #[strum(ascii_case_insensitive)]
 pub enum Source {
     CbAm,
-    #[strum(to_string = "MoEx'", serialize = "moex")]
     MoEx,
     Acba,
     Ameria,
@@ -224,32 +226,33 @@ pub enum Source {
     Mellat,
     Converse,
     AEB,
-    #[strum(to_string = "VTB AM", serialize = "vtbam")]
     VtbAm,
     Artsakh,
     UniBank,
+    UniStream,
     Amio,
     Byblos,
     IdBank,
     Ararat,
-    #[strum(to_string = "IdPay'", serialize = "idpay")]
     IdPay,
     Mir,
     SAS,
     HSBC,
-    #[strum(to_string = "Avosend'", serialize = "avosend")]
     Avosend,
-    #[strum(to_string = "Kwikpay'", serialize = "kwikpay")]
     Kwikpay,
 }
 
 impl Source {
     pub fn prefix(&self) -> &str {
-        if Self::get_not_banks().contains(self) {
-            "#"
-        } else {
+        if self.is_bank() {
             "*"
+        } else {
+            "#"
         }
+    }
+
+    pub fn is_bank(&self) -> bool {
+        !Self::get_not_banks().contains(self)
     }
 
     pub fn get_not_banks() -> Vec<Self> {
@@ -261,6 +264,7 @@ impl Source {
             Self::SAS,
             Self::Avosend,
             Self::Kwikpay,
+            Self::UniStream,
         ]
         .into()
     }
@@ -582,6 +586,14 @@ mod tests {
         let client = build_client()?;
         let config = load_config()?;
         let _: lsoft::Response = kwikpay::Response::get_rates(&client, &config.kwikpay).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_unistream() -> anyhow::Result<()> {
+        let client = build_client()?;
+        let config = load_config()?;
+        let _: lsoft::Response = unistream::Response::get_rates(&client, &config.unistream).await?;
         Ok(())
     }
 }

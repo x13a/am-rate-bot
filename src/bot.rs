@@ -210,8 +210,6 @@ enum Command {
     UsdEur,
     #[command(description = "<FROM> <TO>", parse_with = "split")]
     FromTo { from: String, to: String },
-    #[command(description = "<FROM> <TO> inverted", parse_with = "split")]
-    FromToInv { from: String, to: String },
     #[command(description = "<SOURCE>")]
     Get { src: Source },
     #[command(description = "AMD/USD cash (֏ - $)")]
@@ -228,8 +226,6 @@ enum Command {
     UsdEurCash,
     #[command(description = "<FROM> <TO> cash", parse_with = "split")]
     FromToCash { from: String, to: String },
-    #[command(description = "<FROM> <TO> cash inverted", parse_with = "split")]
-    FromToCashInv { from: String, to: String },
     #[command(description = "<SOURCE> cash")]
     GetCash { src: Source },
     #[command(description = "list sources")]
@@ -397,21 +393,15 @@ async fn command(
             )
             .await?
         }
-        Command::FromTo { ref from, ref to }
-        | Command::FromToInv { ref from, ref to }
-        | Command::FromToCash { ref from, ref to }
-        | Command::FromToCashInv { ref from, ref to } => {
+        Command::FromTo { ref from, ref to } | Command::FromToCash { ref from, ref to } => {
             from_to_repl(
                 Currency::new(from),
                 Currency::new(to),
                 match cmd {
-                    Command::FromToCash { .. } | Command::FromToCashInv { .. } => RateType::Cash,
+                    Command::FromToCash { .. } => RateType::Cash,
                     _ => RateType::NoCash,
                 },
-                match cmd {
-                    Command::FromToInv { .. } | Command::FromToCashInv { .. } => 1,
-                    _ => 0,
-                },
+                0,
                 bot,
                 msg,
                 db,

@@ -202,6 +202,8 @@ enum Command {
     Eur,
     #[command(description = "RUB/AMD (₽ - ֏)")]
     Rub,
+    #[command(description = "AMD/GEL (֏ - ₾)")]
+    Gel,
     #[command(description = "RUB/USD (₽ - $)")]
     RubUsd,
     #[command(description = "RUB/EUR (₽ - €)")]
@@ -218,6 +220,8 @@ enum Command {
     EurCash,
     #[command(description = "RUB/AMD cash (₽ - ֏)")]
     RubCash,
+    #[command(description = "AMD/GEL cash (֏ - ₾)")]
+    GelCash,
     #[command(description = "RUB/USD cash (₽ - $)")]
     RubUsdCash,
     #[command(description = "RUB/EUR cash (₽ - €)")]
@@ -342,6 +346,21 @@ async fn command(
                     _ => RateType::NoCash,
                 },
                 1,
+                bot,
+                msg,
+                db,
+            )
+            .await?
+        }
+        Command::Gel | Command::GelCash => {
+            from_to_repl(
+                Currency::default(),
+                Currency::new("GEL"),
+                match cmd {
+                    Command::GelCash => RateType::Cash,
+                    _ => RateType::NoCash,
+                },
+                0,
                 bot,
                 msg,
                 db,

@@ -4,12 +4,11 @@ use crate::sources::{
     unibank, unistream, vtb_am, Config, Currency, JsonResponse, LSoftResponse, Rate, RateType,
     RateTypeJsonResponse, Source,
 };
+use anyhow::bail;
 use reqwest::Client;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use std::collections::HashMap;
-use std::env;
-use std::fmt::Debug;
+use std::{collections::HashMap, env, fmt::Debug};
 use strum::{EnumCount, IntoEnumIterator};
 use tokio::sync::mpsc;
 
@@ -513,14 +512,15 @@ async fn collect_ararat(client: &Client, config: &ararat::Config) -> anyhow::Res
 async fn collect_idpay(client: &Client, config: &idpay::Config) -> anyhow::Result<Vec<Rate>> {
     let resp: idpay::Response = idpay::Response::get_rates(client, config).await?;
     let to = Currency::default();
+    let from = Currency::rub();
     let Some(rate) = resp
         .result
         .currency_rate
         .iter()
-        .filter(|v| v.iso_txt == Currency::rub())
+        .filter(|v| v.iso_txt == from)
         .next()
     else {
-        Err(Error::NoRates)?
+        bail!(Error::NoRates);
     };
     let mut rate_buy = None;
     let mut rate_sell = None;
@@ -545,7 +545,6 @@ async fn collect_idpay(client: &Client, config: &idpay::Config) -> anyhow::Resul
             rate_buy_idbank = Some(sell - percent(config.commission_rate, sell));
         }
     }
-    let from = rate.iso_txt.clone();
     Ok(vec![
         Rate {
             from: from.clone(),
@@ -577,7 +576,7 @@ async fn collect_mir(client: &Client, config: &mir::Config) -> anyhow::Result<Ve
         .filter(|v| v.currency.strcode == to)
         .next()
     else {
-        Err(Error::NoRates)?
+        bail!(Error::NoRates);
     };
     let buy = if rate.value_sell > dec!(0.0) {
         Some(dec!(1.0) / rate.value_sell)
@@ -629,10 +628,10 @@ async fn collect_kwikpay(client: &Client, config: &kwikpay::Config) -> anyhow::R
         .filter(|v| v.rate_type == RateType::Cash && v.from == from)
         .next()
     else {
-        Err(Error::NoRates)?
+        bail!(Error::NoRates);
     };
     let Some(buy) = rate.buy else {
-        Err(Error::NoRates)?
+        bail!(Error::NoRates);
     };
     Ok(vec![Rate {
         from: from.clone(),
@@ -655,10 +654,10 @@ async fn collect_unistream(
         .filter(|v| v.rate_type == RateType::Cash && v.from == from)
         .next()
     else {
-        Err(Error::NoRates)?
+        bail!(Error::NoRates);
     };
     let Some(buy) = rate.buy else {
-        Err(Error::NoRates)?
+        bail!(Error::NoRates);
     };
     let results = [
         config.commission_rate_from_bank,

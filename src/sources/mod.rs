@@ -1,7 +1,7 @@
+use anyhow::bail;
 pub use lsoft::LSoftResponse;
 use rust_decimal::Decimal;
-use serde::de::DeserializeOwned;
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize};
 use std::fmt::Debug;
 
 pub mod acba;
@@ -66,7 +66,7 @@ pub trait RateTypeJsonResponse {
     {
         match rate_type {
             RateType::NoCash | RateType::Cash => {}
-            _ => Err(Error::InvalidRateType)?,
+            _ => bail!(Error::InvalidRateType),
         };
         let resp = client
             .get(format!("{}{}", config.rates_url(), rate_type as u8))

@@ -36,16 +36,18 @@ impl Response {
             let sell = cells.next().ok_or(Error::Html)?.text();
             let buy_cash = cells.next().ok_or(Error::Html)?.text();
             let sell_cash = cells.next().ok_or(Error::Html)?.text();
+            let to = Currency::default();
+            let from = Currency::new(currency);
             rates.push(Rate {
-                from: Currency::new(&currency),
-                to: Currency::default(),
+                from: from.clone(),
+                to: to.clone(),
                 rate_type: RateType::NoCash,
                 buy: buy.trim().parse().ok(),
                 sell: sell.trim().parse().ok(),
             });
             rates.push(Rate {
-                from: Currency::new(&currency),
-                to: Currency::default(),
+                from,
+                to,
                 rate_type: RateType::Cash,
                 buy: buy_cash.trim().parse().ok(),
                 sell: sell_cash.trim().parse().ok(),

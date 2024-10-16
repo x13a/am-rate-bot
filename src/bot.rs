@@ -1,19 +1,25 @@
-use crate::generator::{generate_from_to_table, generate_src_table};
-use crate::sources::{Currency, Rate, RateType, Source};
-use crate::{Opts, DUNNO};
-use chrono::{DateTime, Utc};
-use std::collections::HashMap;
-use std::env;
-use std::sync::Arc;
-use std::time::SystemTime;
-use strum::IntoEnumIterator;
-use teloxide::adaptors::{
-    throttle::{Limits, Throttle},
-    DefaultParseMode,
+use crate::{
+    generator::{generate_conv_table, generate_src_table},
+    sources::{Currency, Rate, RateType, Source},
+    Opts, DUNNO,
 };
-use teloxide::types::{InputFile, ParseMode};
-use teloxide::update_listeners::webhooks;
-use teloxide::{prelude::*, requests::RequesterExt, utils::command::BotCommands, utils::html};
+use chrono::{DateTime, Utc};
+use std::{collections::HashMap, env, str::FromStr, sync::Arc, time::SystemTime};
+use strum::IntoEnumIterator;
+use teloxide::{
+    adaptors::{
+        throttle::{Limits, Throttle},
+        DefaultParseMode,
+    },
+    prelude::*,
+    requests::RequesterExt,
+    types::{InputFile, ParseMode},
+    update_listeners::webhooks,
+    utils::{
+        command::{BotCommands, ParseError},
+        html,
+    },
+};
 use tokio::sync::Mutex;
 
 type Bot = DefaultParseMode<Throttle<teloxide::Bot>>;
@@ -26,7 +32,7 @@ const WELCOME_MSG: &str = "Meow!";
 #[derive(Debug)]
 pub struct Storage {
     data: Mutex<Data>,
-    cache: Mutex<CacheData>,
+    cache: Mutex<Cache>,
 }
 
 #[derive(Debug)]
@@ -51,20 +57,20 @@ impl Data {
 }
 
 #[derive(Debug)]
-pub struct CacheData {
-    from_to: HashMap<String, String>,
+pub struct Cache {
+    conv: HashMap<String, String>,
     src: HashMap<String, String>,
 }
 
-impl CacheData {
+impl Cache {
     const KEY_SEP: &'static str = "_";
 
     fn clear(&mut self) {
-        self.from_to.clear();
+        self.conv.clear();
         self.src.clear();
     }
 
-    fn add_from_to(
+    fn add_conv(
         &mut self,
         from: Currency,
         to: Currency,
@@ -72,8 +78,8 @@ impl CacheData {
         is_inv: bool,
         value: String,
     ) {
-        self.from_to
-            .insert(self.format_from_to_key(from, to, rate_type, is_inv), value);
+        self.conv
+            .insert(self.format_conv_key(from, to, rate_type, is_inv), value);
     }
 
     fn add_src(&mut self, src: Source, rate_type: RateType, value: String) {
@@ -88,15 +94,15 @@ impl CacheData {
         .join(Self::KEY_SEP)
     }
 
-    fn get_from_to(
+    fn get_conv(
         &self,
         from: Currency,
         to: Currency,
         rate_type: RateType,
         is_inv: bool,
     ) -> Option<String> {
-        self.from_to
-            .get(&self.format_from_to_key(from, to, rate_type, is_inv))
+        self.conv
+            .get(&self.format_conv_key(from, to, rate_type, is_inv))
             .cloned()
     }
 
@@ -104,7 +110,7 @@ impl CacheData {
         self.src.get(&self.format_src_key(src, rate_type)).cloned()
     }
 
-    fn format_from_to_key(
+    fn format_conv_key(
         &self,
         from: Currency,
         to: Currency,
@@ -129,8 +135,8 @@ impl Storage {
                 rates: HashMap::new(),
                 updated_at: SystemTime::now(),
             }),
-            cache: Mutex::new(CacheData {
-                from_to: HashMap::new(),
+            cache: Mutex::new(Cache {
+                conv: HashMap::new(),
                 src: HashMap::new(),
             }),
         })
@@ -156,7 +162,7 @@ impl Storage {
         cache.get_src(src, rate_type)
     }
 
-    pub async fn get_cache_from_to(
+    pub async fn get_cache_conv(
         &self,
         from: Currency,
         to: Currency,
@@ -164,7 +170,7 @@ impl Storage {
         is_inv: bool,
     ) -> Option<String> {
         let cache = self.cache.lock().await;
-        cache.get_from_to(from, to, rate_type, is_inv)
+        cache.get_conv(from, to, rate_type, is_inv)
     }
 
     pub async fn set_cache_src(&self, src: Source, rate_type: RateType, value: String) {
@@ -172,7 +178,7 @@ impl Storage {
         cache.add_src(src, rate_type, value);
     }
 
-    pub async fn set_cache_from_to(
+    pub async fn set_cache_conv(
         &self,
         from: Currency,
         to: Currency,
@@ -181,7 +187,7 @@ impl Storage {
         value: String,
     ) {
         let mut cache = self.cache.lock().await;
-        cache.add_from_to(from, to, rate_type, is_inv, value);
+        cache.add_conv(from, to, rate_type, is_inv, value);
     }
 
     pub async fn get_updated_at(&self) -> SystemTime {
@@ -196,13 +202,13 @@ impl Storage {
     description = "These commands are supported:"
 )]
 enum Command {
-    #[command(description = "AMD/USD (֏ - $)")]
+    #[command(description = "USD ($)")]
     Usd,
-    #[command(description = "AMD/EUR (֏ - €)")]
+    #[command(description = "EUR (€)")]
     Eur,
-    #[command(description = "RUB/AMD (₽ - ֏)")]
+    #[command(description = "RUB (₽)")]
     Rub,
-    #[command(description = "AMD/GEL (֏ - ₾)")]
+    #[command(description = "GEL (₾)")]
     Gel,
     #[command(description = "RUB/USD (₽ - $)")]
     RubUsd,
@@ -210,17 +216,17 @@ enum Command {
     RubEur,
     #[command(description = "USD/EUR ($ - €)")]
     UsdEur,
-    #[command(description = "<FROM> <TO>", parse_with = "split")]
-    FromTo { from: String, to: String },
+    #[command(description = "<FROM> <TO>?", parse_with = parse_conv)]
+    Conv { from: Currency, to: Currency },
     #[command(description = "<SOURCE>")]
     Get { src: Source },
-    #[command(description = "AMD/USD cash (֏ - $)")]
+    #[command(description = "USD cash ($)")]
     UsdCash,
-    #[command(description = "AMD/EUR cash (֏ - €)")]
+    #[command(description = "EUR cash (€)")]
     EurCash,
-    #[command(description = "RUB/AMD cash (₽ - ֏)")]
+    #[command(description = "RUB cash (₽)")]
     RubCash,
-    #[command(description = "AMD/GEL cash (֏ - ₾)")]
+    #[command(description = "GEL cash (₾)")]
     GelCash,
     #[command(description = "RUB/USD cash (₽ - $)")]
     RubUsdCash,
@@ -228,18 +234,18 @@ enum Command {
     RubEurCash,
     #[command(description = "USD/EUR cash ($ - €)")]
     UsdEurCash,
-    #[command(description = "<FROM> <TO> cash", parse_with = "split")]
-    FromToCash { from: String, to: String },
+    #[command(description = "<FROM> <TO>? cash", parse_with = parse_conv)]
+    ConvCash { from: Currency, to: Currency },
     #[command(description = "<SOURCE> cash")]
     GetCash { src: Source },
-    #[command(description = "list sources")]
+    #[command(description = "list sources", aliases = ["ls"])]
     List,
-    #[command(description = "bot status")]
-    Status,
-    #[command(description = "help")]
+    #[command(description = "bot info")]
+    Info,
+    #[command(description = "help", aliases = ["h", "?"])]
     Help,
-    #[command(description = "welcome")]
-    Start,
+    #[command(description = "welcome", hide)]
+    Start(String),
 }
 
 pub async fn run(db: Arc<Storage>, opts: Opts) -> anyhow::Result<()> {
@@ -304,18 +310,18 @@ async fn command(
             )
             .await?;
         }
-        Command::Start => {
-            bot.send_message(msg.chat.id, WELCOME_MSG).await?;
+        Command::Start(s) => {
+            start_repl(s, bot, msg, db).await?;
         }
         Command::Usd | Command::UsdCash => {
-            from_to_repl(
+            conv_repl(
                 Currency::default(),
                 Currency::usd(),
                 match cmd {
                     Command::UsdCash => RateType::Cash,
                     _ => RateType::NoCash,
                 },
-                0,
+                false,
                 bot,
                 msg,
                 db,
@@ -323,14 +329,14 @@ async fn command(
             .await?
         }
         Command::Eur | Command::EurCash => {
-            from_to_repl(
+            conv_repl(
                 Currency::default(),
                 Currency::eur(),
                 match cmd {
                     Command::EurCash => RateType::Cash,
                     _ => RateType::NoCash,
                 },
-                0,
+                false,
                 bot,
                 msg,
                 db,
@@ -338,14 +344,14 @@ async fn command(
             .await?
         }
         Command::Rub | Command::RubCash => {
-            from_to_repl(
+            conv_repl(
                 Currency::rub(),
                 Currency::default(),
                 match cmd {
                     Command::RubCash => RateType::Cash,
                     _ => RateType::NoCash,
                 },
-                1,
+                true,
                 bot,
                 msg,
                 db,
@@ -353,14 +359,14 @@ async fn command(
             .await?
         }
         Command::Gel | Command::GelCash => {
-            from_to_repl(
+            conv_repl(
                 Currency::default(),
                 Currency::new("GEL"),
                 match cmd {
                     Command::GelCash => RateType::Cash,
                     _ => RateType::NoCash,
                 },
-                0,
+                false,
                 bot,
                 msg,
                 db,
@@ -368,14 +374,14 @@ async fn command(
             .await?
         }
         Command::RubUsd | Command::RubUsdCash => {
-            from_to_repl(
+            conv_repl(
                 Currency::rub(),
                 Currency::usd(),
                 match cmd {
                     Command::RubUsdCash => RateType::Cash,
                     _ => RateType::NoCash,
                 },
-                0,
+                false,
                 bot,
                 msg,
                 db,
@@ -383,14 +389,14 @@ async fn command(
             .await?
         }
         Command::RubEur | Command::RubEurCash => {
-            from_to_repl(
+            conv_repl(
                 Currency::rub(),
                 Currency::eur(),
                 match cmd {
                     Command::RubEurCash => RateType::Cash,
                     _ => RateType::NoCash,
                 },
-                0,
+                false,
                 bot,
                 msg,
                 db,
@@ -398,29 +404,29 @@ async fn command(
             .await?
         }
         Command::UsdEur | Command::UsdEurCash => {
-            from_to_repl(
+            conv_repl(
                 Currency::usd(),
                 Currency::eur(),
                 match cmd {
                     Command::UsdEurCash => RateType::Cash,
                     _ => RateType::NoCash,
                 },
-                0,
+                false,
                 bot,
                 msg,
                 db,
             )
             .await?
         }
-        Command::FromTo { ref from, ref to } | Command::FromToCash { ref from, ref to } => {
-            from_to_repl(
-                Currency::new(from),
-                Currency::new(to),
+        Command::Conv { ref from, ref to } | Command::ConvCash { ref from, ref to } => {
+            conv_repl(
+                from.clone(),
+                to.clone(),
                 match cmd {
-                    Command::FromToCash { .. } => RateType::Cash,
+                    Command::ConvCash { .. } => RateType::Cash,
                     _ => RateType::NoCash,
                 },
-                0,
+                *to == Currency::default(),
                 bot,
                 msg,
                 db,
@@ -441,27 +447,89 @@ async fn command(
             .await?;
         }
         Command::List => {
-            let mut srcs = Source::iter()
-                .map(|v| v.to_string().to_lowercase())
-                .collect::<Vec<_>>();
-            srcs.sort();
-            bot.send_message(msg.chat.id, srcs.join(", ")).await?;
+            ls_repl(bot, msg).await?;
         }
-        Command::Status => {
-            const VERSION: &str = env!("CARGO_PKG_VERSION");
-            let updated_at = db.get_updated_at().await;
-            let update_interval = opts.update_interval;
-            let lines = [
-                format!("version: {VERSION}"),
-                format!("update_interval: {update_interval}"),
-                format!(
-                    "updated_at: {}",
-                    DateTime::<Utc>::from(updated_at).format("%F %T %Z"),
-                ),
-            ];
-            bot.send_message(msg.chat.id, lines.join("\n")).await?;
+        Command::Info => {
+            info_repl(bot, msg, db, opts).await?;
         }
     }
+    Ok(())
+}
+
+fn parse_conv(s: String) -> Result<(Currency, Currency), ParseError> {
+    if let Some((from, to)) = s.split_once('/') {
+        return Ok((Currency::new(from), Currency::new(to)));
+    }
+    let mut ws = s.split_whitespace();
+    if let (Some(from), Some(to)) = (ws.next(), ws.next()) {
+        return Ok((Currency::new(from), Currency::new(to)));
+    }
+    Ok((Currency::default(), Currency::new(s)))
+}
+
+async fn start_repl(
+    value: String,
+    bot: Bot,
+    msg: Message,
+    db: Arc<Storage>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    if value.is_empty() {
+        bot.send_message(msg.chat.id, WELCOME_MSG).await?;
+        return Ok(());
+    }
+    let mut value = value.clone();
+    let mut rate_type = RateType::NoCash;
+    if let Some((main, param)) = value.split_once(':') {
+        if let Ok(v) = RateType::from_str(param.trim()) {
+            rate_type = v;
+        }
+        value = main.into();
+    }
+    if let Ok(src) = Source::from_str(value.trim()) {
+        src_repl(src, rate_type, bot, msg, db).await?;
+        return Ok(());
+    }
+    let (from, to) = parse_conv(value).unwrap();
+    conv_repl(
+        from.clone(),
+        to.clone(),
+        rate_type,
+        to == Currency::default(),
+        bot,
+        msg,
+        db,
+    )
+    .await?;
+    Ok(())
+}
+
+async fn ls_repl(bot: Bot, msg: Message) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let mut srcs = Source::iter()
+        .map(|v| v.to_string().to_lowercase())
+        .collect::<Vec<_>>();
+    srcs.sort();
+    bot.send_message(msg.chat.id, srcs.join(", ")).await?;
+    Ok(())
+}
+
+async fn info_repl(
+    bot: Bot,
+    msg: Message,
+    db: Arc<Storage>,
+    opts: Opts,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+    let updated_at = db.get_updated_at().await;
+    let update_interval = opts.update_interval;
+    let lines = [
+        format!("version: {VERSION}"),
+        format!("update_interval: {update_interval}"),
+        format!(
+            "updated_at: {}",
+            DateTime::<Utc>::from(updated_at).format("%F %T %Z"),
+        ),
+    ];
+    bot.send_message(msg.chat.id, lines.join("\n")).await?;
     Ok(())
 }
 
@@ -487,31 +555,30 @@ async fn src_repl(
     Ok(())
 }
 
-async fn from_to_repl(
+async fn conv_repl(
     mut from: Currency,
     mut to: Currency,
     rate_type: RateType,
-    inv: i32,
+    inv: bool,
     bot: Bot,
     msg: Message,
     db: Arc<Storage>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if from.is_empty() || to.is_empty() {
-        bot.send_message(msg.chat.id, DUNNO).await?;
-        return Ok(());
+        return dunno_repl(bot, msg).await;
     }
     let rates = db.get_rates().await;
     for idx in 0..2 {
-        let is_inv = idx % 2 == inv;
+        let is_inv = idx % 2 == inv as usize;
         let cached = db
-            .get_cache_from_to(from.clone(), to.clone(), rate_type, is_inv)
+            .get_cache_conv(from.clone(), to.clone(), rate_type, is_inv)
             .await;
         let s = match cached {
             Some(s) => s,
             None => {
                 log::debug!("empty cache from to");
-                let s = generate_from_to_table(from.clone(), to.clone(), &rates, rate_type, is_inv);
-                db.set_cache_from_to(from.clone(), to.clone(), rate_type, is_inv, s.clone())
+                let s = generate_conv_table(from.clone(), to.clone(), &rates, rate_type, is_inv);
+                db.set_cache_conv(from.clone(), to.clone(), rate_type, is_inv, s.clone())
                     .await;
                 s
             }
@@ -519,5 +586,13 @@ async fn from_to_repl(
         bot.send_message(msg.chat.id, html::code_block(&s)).await?;
         std::mem::swap(&mut from, &mut to);
     }
+    Ok(())
+}
+
+async fn dunno_repl(
+    bot: Bot,
+    msg: Message,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    bot.send_message(msg.chat.id, DUNNO).await?;
     Ok(())
 }

@@ -1,9 +1,13 @@
-use crate::sources::{Currency, Rate, RateType, Source};
-use crate::DUNNO;
+use crate::{
+    sources::{Currency, Rate, RateType, Source},
+    DUNNO,
+};
 use rust_decimal::{Decimal, RoundingStrategy};
 use rust_decimal_macros::dec;
-use std::collections::{HashMap, HashSet};
-use std::fmt::Write;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Write,
+};
 
 const RATE_DP: u32 = 4;
 const DIFF_DP: u32 = 2;
@@ -93,12 +97,12 @@ fn dfs(
     visited.remove(&from);
 }
 
-pub fn generate_from_to_table(
+pub fn generate_conv_table(
     from: Currency,
     to: Currency,
     rates: &HashMap<Source, Vec<Rate>>,
     rate_type: RateType,
-    is_inv: bool,
+    inv: bool,
 ) -> String {
     if from.is_empty() || to.is_empty() {
         return DUNNO.into();
@@ -117,7 +121,7 @@ pub fn generate_from_to_table(
     let mut table = vec![];
     let mut src_width: usize = 0;
     let mut rate_width: usize = 0;
-    let sort = if is_inv {
+    let sort = if inv {
         |a: Decimal, b: Decimal| a.partial_cmp(&b).expect("panic")
     } else {
         |a: Decimal, b: Decimal| b.partial_cmp(&a).expect("panic")
@@ -125,7 +129,7 @@ pub fn generate_from_to_table(
     for (src, rates) in rates {
         let graph = build_graph(&rates, rate_type);
         let mut paths = find_all_paths(&graph, from.clone(), to.clone());
-        if is_inv {
+        if inv {
             paths.iter_mut().for_each(|v| v.1 = dec!(1.0) / v.1);
         }
         paths.sort_by(|a, b| sort(a.1, b.1));
@@ -224,7 +228,7 @@ fn decimal_to_string(value: Decimal, dp: u32) -> String {
 pub fn generate_src_table(
     src: Source,
     rates: &HashMap<Source, Vec<Rate>>,
-    mut rate_type: RateType,
+    rate_type: RateType,
 ) -> String {
     let Some(rates) = rates.get(&src) else {
         return DUNNO.into();
@@ -238,6 +242,7 @@ pub fn generate_src_table(
         to: Currency,
     }
 
+    let mut rate_type = rate_type;
     if src == Source::CbAm {
         rate_type = RateType::Cb;
     }
@@ -514,24 +519,21 @@ mod tests {
         let graph = build_graph(&rates, RateType::NoCash);
         let test_cases = get_test_cases();
         for (from, to) in test_cases {
-            let mut paths = find_all_paths(&graph, from.clone(), to.clone());
-            paths.sort_by(|a, b| b.1.partial_cmp(&a.1).expect("panic"));
+            let _ = find_all_paths(&graph, from.clone(), to.clone());
         }
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_generate_from_to_table() -> anyhow::Result<()> {
+    async fn test_generate_conv_table() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_src_config()?;
         let results = collect_all(&client, &config).await;
         let rates = filter_collection(results);
         let test_cases = get_test_cases();
         for (from, to) in test_cases {
-            let _ =
-                generate_from_to_table(from.clone(), to.clone(), &rates, RateType::NoCash, false);
-            let _ =
-                generate_from_to_table(to.clone(), from.clone(), &rates, RateType::NoCash, true);
+            let _ = generate_conv_table(from.clone(), to.clone(), &rates, RateType::NoCash, false);
+            let _ = generate_conv_table(to.clone(), from.clone(), &rates, RateType::NoCash, true);
         }
         Ok(())
     }

@@ -1,8 +1,5 @@
-use am_rate_bot::sources::Config;
-use am_rate_bot::{bot, collector, Opts};
-use std::sync::Arc;
-use std::time::Duration;
-use std::{env, fs};
+use am_rate_bot::{bot, collector, sources::Config, Opts};
+use std::{env, fs, sync::Arc, time::Duration};
 
 const ENV_SRC_CONFIG: &str = "SRC_CONFIG";
 const ENV_REQWEST_TIMEOUT: &str = "REQWEST_TIMEOUT";

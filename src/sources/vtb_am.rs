@@ -50,7 +50,7 @@ impl Response {
                     .ok_or(Error::Html)?
                     .text();
                 rates.push(Rate {
-                    from: Currency::new(&currency),
+                    from: Currency::new(currency),
                     to: Currency::default(),
                     rate_type: match idx {
                         0 => RateType::Cash,

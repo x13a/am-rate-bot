@@ -246,6 +246,8 @@ impl Source {
     pub fn prefix(&self) -> &str {
         if self.is_bank() {
             "*"
+        } else if *self == Self::CbAm {
+            "@"
         } else {
             "#"
         }

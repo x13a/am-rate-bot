@@ -1,3 +1,3 @@
 # Privacy Policy
 
-No logging
+No log

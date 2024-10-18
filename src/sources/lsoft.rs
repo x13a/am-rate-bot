@@ -91,7 +91,7 @@ impl LSoftRequest for Config {
 
 pub trait LSoftResponse {
     #[allow(async_fn_in_trait)]
-    async fn get_rates<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
+    async fn get<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
     where
         T1: DeserializeOwned,
         T2: SourceConfigTrait + LSoftRequest,

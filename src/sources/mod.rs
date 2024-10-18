@@ -38,7 +38,7 @@ pub trait SourceConfigTrait {
 }
 pub trait JsonResponse {
     #[allow(async_fn_in_trait)]
-    async fn get_rates<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
+    async fn get<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
     where
         T1: DeserializeOwned,
         T2: SourceConfigTrait,
@@ -55,7 +55,7 @@ pub trait JsonResponse {
 
 pub trait RateTypeJsonResponse {
     #[allow(async_fn_in_trait)]
-    async fn get_rates<T1, T2>(
+    async fn get<T1, T2>(
         client: &reqwest::Client,
         config: &T2,
         rate_type: RateType,
@@ -366,7 +366,7 @@ mod tests {
     async fn test_acba() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: acba::Response = acba::Response::get_rates(&client, &config.acba).await?;
+        let _: acba::Response = acba::Response::get(&client, &config.acba).await?;
         Ok(())
     }
 
@@ -375,10 +375,10 @@ mod tests {
         let client = build_client()?;
         let config = load_config()?;
         let _: armsoft::Response =
-            ameria::Response::get_rates(&client, &config.ameria, RateType::NoCash).await?;
+            ameria::Response::get(&client, &config.ameria, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
         let _: armsoft::Response =
-            ameria::Response::get_rates(&client, &config.ameria, RateType::Cash).await?;
+            ameria::Response::get(&client, &config.ameria, RateType::Cash).await?;
         Ok(())
     }
 
@@ -386,7 +386,7 @@ mod tests {
     async fn test_ardshin() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: ardshin::Response = ardshin::Response::get_rates(&client, &config.ardshin).await?;
+        let _: ardshin::Response = ardshin::Response::get(&client, &config.ardshin).await?;
         Ok(())
     }
 
@@ -395,10 +395,10 @@ mod tests {
         let client = build_client()?;
         let config = load_config()?;
         let _: armsoft::Response =
-            evoca::Response::get_rates(&client, &config.evoca, RateType::NoCash).await?;
+            evoca::Response::get(&client, &config.evoca, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
         let _: armsoft::Response =
-            evoca::Response::get_rates(&client, &config.evoca, RateType::Cash).await?;
+            evoca::Response::get(&client, &config.evoca, RateType::Cash).await?;
         Ok(())
     }
 
@@ -407,10 +407,9 @@ mod tests {
         let client = build_client()?;
         let config = load_config()?;
         let _: fast::Response =
-            fast::Response::get_rates(&client, &config.fast, RateType::NoCash).await?;
+            fast::Response::get(&client, &config.fast, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
-        let _: fast::Response =
-            fast::Response::get_rates(&client, &config.fast, RateType::Cash).await?;
+        let _: fast::Response = fast::Response::get(&client, &config.fast, RateType::Cash).await?;
         Ok(())
     }
 
@@ -418,7 +417,7 @@ mod tests {
     async fn test_ineco() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: ineco::Response = ineco::Response::get_rates(&client, &config.ineco).await?;
+        let _: ineco::Response = ineco::Response::get(&client, &config.ineco).await?;
         Ok(())
     }
 
@@ -426,7 +425,7 @@ mod tests {
     async fn test_mellat() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: mellat::Response = mellat::Response::get_rates(&client, &config.mellat).await?;
+        let _: mellat::Response = mellat::Response::get(&client, &config.mellat).await?;
         Ok(())
     }
 
@@ -434,8 +433,7 @@ mod tests {
     async fn test_arm_swiss() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: arm_swiss::Response =
-            arm_swiss::Response::get_rates(&client, &config.arm_swiss).await?;
+        let _: arm_swiss::Response = arm_swiss::Response::get(&client, &config.arm_swiss).await?;
         Ok(())
     }
 
@@ -443,7 +441,7 @@ mod tests {
     async fn test_cb_am() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: cb_am::Response = cb_am::Response::get_rates(&client, &config.cb_am).await?;
+        let _: cb_am::Response = cb_am::Response::get(&client, &config.cb_am).await?;
         Ok(())
     }
 
@@ -451,8 +449,7 @@ mod tests {
     async fn test_converse() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: converse::Response =
-            converse::Response::get_rates(&client, &config.converse).await?;
+        let _: converse::Response = converse::Response::get(&client, &config.converse).await?;
         Ok(())
     }
 
@@ -460,7 +457,7 @@ mod tests {
     async fn test_aeb() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: aeb::Response = aeb::Response::get_rates(&client, &config.aeb).await?;
+        let _: aeb::Response = aeb::Response::get(&client, &config.aeb).await?;
         Ok(())
     }
 
@@ -469,7 +466,7 @@ mod tests {
     async fn test_vtb_am() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: vtb_am::Response = vtb_am::Response::get_rates(&client, &config.vtb_am).await?;
+        let _: vtb_am::Response = vtb_am::Response::get(&client, &config.vtb_am).await?;
         Ok(())
     }
 
@@ -477,7 +474,7 @@ mod tests {
     async fn test_artsakh() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: lsoft::Response = artsakh::Response::get_rates(&client, &config.artsakh).await?;
+        let _: lsoft::Response = artsakh::Response::get(&client, &config.artsakh).await?;
         Ok(())
     }
 
@@ -485,7 +482,7 @@ mod tests {
     async fn test_unibank() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: lsoft::Response = unibank::Response::get_rates(&client, &config.unibank).await?;
+        let _: lsoft::Response = unibank::Response::get(&client, &config.unibank).await?;
         Ok(())
     }
 
@@ -494,10 +491,10 @@ mod tests {
         let client = build_client()?;
         let config = load_config()?;
         let _: armsoft::Response =
-            amio::Response::get_rates(&client, &config.amio, RateType::NoCash).await?;
+            amio::Response::get(&client, &config.amio, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
         let _: armsoft::Response =
-            amio::Response::get_rates(&client, &config.amio, RateType::Cash).await?;
+            amio::Response::get(&client, &config.amio, RateType::Cash).await?;
         Ok(())
     }
 
@@ -506,10 +503,10 @@ mod tests {
         let client = build_client()?;
         let config = load_config()?;
         let _: armsoft::Response =
-            byblos::Response::get_rates(&client, &config.byblos, RateType::NoCash).await?;
+            byblos::Response::get(&client, &config.byblos, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
         let _: armsoft::Response =
-            byblos::Response::get_rates(&client, &config.byblos, RateType::Cash).await?;
+            byblos::Response::get(&client, &config.byblos, RateType::Cash).await?;
         Ok(())
     }
 
@@ -517,7 +514,7 @@ mod tests {
     async fn test_idbank() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: idbank::Response = idbank::Response::get_rates(&client, &config.idbank).await?;
+        let _: idbank::Response = idbank::Response::get(&client, &config.idbank).await?;
         Ok(())
     }
 
@@ -526,7 +523,9 @@ mod tests {
     async fn test_moex() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: moex::Response = moex::Response::get_rates(&client, &config.moex).await?;
+        let _: moex::CurrencyResponse = moex::CurrencyResponse::get(&client, &config.moex).await?;
+        let _: moex::GetOrderBookResponse =
+            moex::GetOrderBookResponse::get(&client, &config.moex).await?;
         Ok(())
     }
 
@@ -535,10 +534,10 @@ mod tests {
         let client = build_client()?;
         let config = load_config()?;
         let _: armsoft::Response =
-            ararat::Response::get_rates(&client, &config.ararat, RateType::NoCash).await?;
+            ararat::Response::get(&client, &config.ararat, RateType::NoCash).await?;
         tokio::time::sleep(Duration::from_secs(1)).await;
         let _: armsoft::Response =
-            ararat::Response::get_rates(&client, &config.ararat, RateType::Cash).await?;
+            ararat::Response::get(&client, &config.ararat, RateType::Cash).await?;
         Ok(())
     }
 
@@ -546,7 +545,7 @@ mod tests {
     async fn test_idpay() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: idpay::Response = idpay::Response::get_rates(&client, &config.idpay).await?;
+        let _: idpay::Response = idpay::Response::get(&client, &config.idpay).await?;
         Ok(())
     }
 
@@ -554,7 +553,7 @@ mod tests {
     async fn test_mir() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: mir::Response = mir::Response::get_rates(&client, &config.mir).await?;
+        let _: mir::Response = mir::Response::get(&client, &config.mir).await?;
         Ok(())
     }
 
@@ -563,7 +562,7 @@ mod tests {
     async fn test_sas() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: sas::Response = sas::Response::get_rates(&client, &config.sas).await?;
+        let _: sas::Response = sas::Response::get(&client, &config.sas).await?;
         Ok(())
     }
 
@@ -571,7 +570,7 @@ mod tests {
     async fn test_hsbc() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: hsbc::Response = hsbc::Response::get_rates(&client, &config.hsbc).await?;
+        let _: hsbc::Response = hsbc::Response::get(&client, &config.hsbc).await?;
         Ok(())
     }
 
@@ -579,7 +578,7 @@ mod tests {
     async fn test_avosend() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: avosend::Response = avosend::Response::get_rates(&client, &config.avosend).await?;
+        let _: avosend::Response = avosend::Response::get(&client, &config.avosend).await?;
         Ok(())
     }
 
@@ -587,7 +586,7 @@ mod tests {
     async fn test_kwikpay() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: lsoft::Response = kwikpay::Response::get_rates(&client, &config.kwikpay).await?;
+        let _: lsoft::Response = kwikpay::Response::get(&client, &config.kwikpay).await?;
         Ok(())
     }
 
@@ -595,7 +594,7 @@ mod tests {
     async fn test_unistream() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_config()?;
-        let _: lsoft::Response = unistream::Response::get_rates(&client, &config.unistream).await?;
+        let _: lsoft::Response = unistream::Response::get(&client, &config.unistream).await?;
         Ok(())
     }
 }

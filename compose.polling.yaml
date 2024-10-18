@@ -3,6 +3,7 @@ services:
     build: .
     image: 'am-rate-bot'
     container_name: 'am-rate-bot'
+    restart: unless-stopped
     env_file:
       - './config/bot.env'
     volumes:

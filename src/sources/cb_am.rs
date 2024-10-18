@@ -41,6 +41,8 @@ pub struct ExchangeRate {
     pub iso: Currency,
     #[serde(deserialize_with = "de::decimal")]
     pub rate: Decimal,
+    #[serde(deserialize_with = "de::decimal")]
+    pub amount: Decimal,
 }
 
 pub mod request {
@@ -73,7 +75,7 @@ pub mod request {
 }
 
 impl Response {
-    pub async fn get_rates<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Self>
+    pub async fn get<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Self>
     where
         T: SourceConfigTrait,
     {

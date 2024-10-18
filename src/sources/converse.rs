@@ -27,6 +27,7 @@ pub struct Item {
 pub struct Currency {
     #[serde(deserialize_with = "de_utils::currency")]
     pub iso: ModCurrency,
+    pub use_for_rates: i32,
 }
 
 impl JsonResponse for Response {}

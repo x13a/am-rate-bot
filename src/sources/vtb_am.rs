@@ -9,7 +9,7 @@ pub struct Response {
 }
 
 impl Response {
-    pub async fn get_rates<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Self>
+    pub async fn get<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Self>
     where
         T: SourceConfigTrait,
     {

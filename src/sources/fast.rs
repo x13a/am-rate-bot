@@ -19,6 +19,8 @@ pub struct Rate {
     pub id: Currency,
     #[serde(deserialize_with = "arbitrary_precision::deserialize")]
     pub sale: Decimal,
+    #[serde(deserialize_with = "arbitrary_precision::deserialize")]
+    pub unit: Decimal,
 }
 
 impl RateTypeJsonResponse for Response {}

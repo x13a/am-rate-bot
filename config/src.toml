@@ -87,11 +87,13 @@ rates_url = "https://api-user.vamprivet.ru/backend/api/v2/currencies/rates"
 enabled = true
 
 [moex]
-rates_url = "https://invest-public-api.tinkoff.ru/rest/tinkoff.public.invest.api.contract.v1.MarketDataService/GetOrderBook"
+base_url = "https://invest-public-api.tinkoff.ru/rest"
+path_order_book = "tinkoff.public.invest.api.contract.v1.MarketDataService/GetOrderBook"
+path_currency = "tinkoff.public.invest.api.contract.v1.InstrumentsService/CurrencyBy"
 enabled = true
 
 # AMDRUB_TOM
-req.figi = "BBG0013J7V24"
+req.instrument_id = "BBG0013J7V24"
 req.depth = 1
 
 [sas]

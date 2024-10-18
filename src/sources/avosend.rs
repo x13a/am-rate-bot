@@ -28,7 +28,7 @@ pub struct Config {
 }
 
 impl Response {
-    pub async fn get_rates(client: &reqwest::Client, config: &Config) -> anyhow::Result<Self> {
+    pub async fn get(client: &reqwest::Client, config: &Config) -> anyhow::Result<Self> {
         let req_data = Request {
             country_code_from: config.req.country_code_from.clone(),
             country_id_from: config.req.country_id_from,

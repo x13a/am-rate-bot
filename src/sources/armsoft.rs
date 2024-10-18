@@ -18,4 +18,6 @@ pub struct ExchangeRate {
     pub purchase: Decimal,
     #[serde(deserialize_with = "arbitrary_precision::deserialize")]
     pub sale: Decimal,
+    #[serde(deserialize_with = "arbitrary_precision::deserialize")]
+    pub rate_for: Decimal,
 }

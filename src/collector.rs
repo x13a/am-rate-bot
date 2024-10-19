@@ -1,14 +1,15 @@
 use crate::sources::{
-    acba, aeb, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, avosend, byblos, cb_am,
-    converse, evoca, fast, hsbc, idbank, idpay, ineco, kwikpay, lsoft, mellat, mir, moex, sas,
-    unibank, unistream, vtb_am, Config, Currency, JsonResponse, LSoftResponse, Rate, RateType,
-    RateTypeJsonResponse, Source,
+    acba, aeb, alfa_by, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, avosend,
+    byblos, cb_am, converse, evoca, fast, hsbc, idbank, idpay, ineco, kwikpay, lsoft, mellat, mir,
+    moex, sas, unibank, unistream, vtb_am, Config, Currency, JsonResponse, LSoftResponse, Rate,
+    RateType, RateTypeJsonResponse, Source,
 };
 use anyhow::bail;
+use regex::Regex;
 use reqwest::Client;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use std::{collections::HashMap, env, fmt::Debug};
+use std::{collections::HashMap, env, fmt::Debug, str::FromStr, sync::LazyLock};
 use strum::{EnumCount, IntoEnumIterator};
 use tokio::sync::mpsc;
 
@@ -38,7 +39,7 @@ pub async fn collect_all(
         let tx = tx.clone();
         tokio::spawn(async move {
             let result = collect(&client, &config, src).await;
-            tx.send((src, result)).await.expect("panic");
+            tx.send((src, result)).await.unwrap();
         });
     }
     drop(tx);
@@ -90,7 +91,7 @@ async fn collect(client: &Client, config: &Config, src: Source) -> anyhow::Resul
         Source::AEB => collect_aeb(client, &config.aeb).await?,
         Source::VtbAm => collect_vtb_am(client, &config.vtb_am).await?,
         Source::Artsakh => collect_artsakh(client, &config.artsakh).await?,
-        Source::UniBank => collect_unibank(client, &config.unibank).await?,
+        Source::Unibank => collect_unibank(client, &config.unibank).await?,
         Source::Amio => collect_amio(client, &config.amio).await?,
         Source::Byblos => collect_byblos(client, &config.byblos).await?,
         Source::IdBank => collect_idbank(client, &config.idbank).await?,
@@ -102,7 +103,8 @@ async fn collect(client: &Client, config: &Config, src: Source) -> anyhow::Resul
         Source::HSBC => collect_hsbc(client, &config.hsbc).await?,
         Source::Avosend => collect_avosend(client, &config.avosend).await?,
         Source::Kwikpay => collect_kwikpay(client, &config.kwikpay).await?,
-        Source::UniStream => collect_unistream(client, &config.unistream).await?,
+        Source::Unistream => collect_unistream(client, &config.unistream).await?,
+        Source::AlfaBy => collect_alfa_by(client, &config.alfa_by).await?,
     };
     Ok(rates)
 }
@@ -677,6 +679,68 @@ async fn collect_unistream(
     Ok(results)
 }
 
+async fn collect_alfa_by(client: &Client, config: &alfa_by::Config) -> anyhow::Result<Vec<Rate>> {
+    let resp: alfa_by::Response = alfa_by::Response::get(client, config).await?;
+    let Some(item) = resp.initial_items.iter().next() else {
+        bail!(Error::NoRates);
+    };
+    let Some(data) = item.currencies_data.iter().next() else {
+        bail!(Error::NoRates);
+    };
+    let mut rates = vec![];
+    for rate in &data.value.exchange_rate {
+        let Ok((amount, from)) = alfa_by_regex_helper(&rate.title) else {
+            continue;
+        };
+        let (buy, sell) = match from.0.as_str() {
+            Currency::RUB => (Some(rate.purchase.value / amount), None),
+            Currency::USD | Currency::EUR => {
+                let sell = rate.sell.value / amount;
+                (None, Some(sell + percent(config.commission_rate, sell)))
+            }
+            _ => continue,
+        };
+        rates.push(Rate {
+            from,
+            to: Currency::new("BYN"),
+            rate_type: RateType::NoCash,
+            buy,
+            sell,
+        });
+    }
+    if let Some(conversation_rate) = &data.value.conversion_rate {
+        for rate in conversation_rate {
+            let Some((from, to)) = rate.title.split_once('/') else {
+                continue;
+            };
+            let (buy, sell) = match (from, to) {
+                (Currency::USD, Currency::RUB) | (Currency::EUR, Currency::RUB) => {
+                    let sell = rate.sell.value;
+                    (None, Some(sell + percent(config.commission_rate, sell)))
+                }
+                _ => continue,
+            };
+            rates.push(Rate {
+                from: Currency::new(from),
+                to: Currency::new(to),
+                rate_type: RateType::NoCash,
+                buy,
+                sell,
+            });
+        }
+    };
+    Ok(rates)
+}
+
+fn alfa_by_regex_helper(s: &str) -> anyhow::Result<(Decimal, Currency)> {
+    static RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?P<amount>\d+).*\((?P<iso>[A-Z]{3})\)").unwrap());
+    let caps = RE.captures(s).ok_or(Error::NoRates)?;
+    let amount = Decimal::from_str(&caps["amount"])?;
+    let from = Currency::new(&caps["iso"]);
+    Ok((amount, from))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -804,7 +868,7 @@ mod tests {
     async fn test_collect_unibank() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_src_config()?;
-        collect(&client, &config, Source::UniBank).await?;
+        collect(&client, &config, Source::Unibank).await?;
         Ok(())
     }
 
@@ -902,7 +966,15 @@ mod tests {
     async fn test_collect_unistream() -> anyhow::Result<()> {
         let client = build_client()?;
         let config = load_src_config()?;
-        collect(&client, &config, Source::UniStream).await?;
+        collect(&client, &config, Source::Unistream).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collect_alfa_by() -> anyhow::Result<()> {
+        let client = build_client()?;
+        let config = load_src_config()?;
+        collect(&client, &config, Source::AlfaBy).await?;
         Ok(())
     }
 }

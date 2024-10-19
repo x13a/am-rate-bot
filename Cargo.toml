@@ -1,6 +1,6 @@
 [package]
 name = "am-rate-bot"
-version = "0.24.0"
+version = "0.25.0"
 edition = "2021"
 authors = ["lucky"]
 
@@ -18,6 +18,7 @@ quick-xml = { version = "0.36", features = ["serialize"] }
 rust_decimal = { version = "1.36", features = ["serde-with-arbitrary-precision"] }
 rust_decimal_macros = "1.36"
 chrono = "0.4"
+regex = "1.11"
 
 # sugar
 strum = { version = "0.26", features = ["derive"] }
@@ -25,5 +26,5 @@ derive_more = { version = "1.0", features = ["display"] }
 thiserror = "1.0"
 anyhow = "1.0"
 
-# vtb_am/hsbc/sas src html parser
+# vtb_am/hsbc/sas/alfa_by src html parser
 select = "0.6.0"

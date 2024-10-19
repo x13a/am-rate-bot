@@ -39,7 +39,7 @@ dependencies = [
 
 [[package]]
 name = "am-rate-bot"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -47,6 +47,7 @@ dependencies = [
  "env_logger",
  "log",
  "quick-xml",
+ "regex",
  "reqwest 0.12.8",
  "rust_decimal",
  "rust_decimal_macros",

@@ -110,7 +110,7 @@ pub trait LSoftResponse {
         };
         let body = client
             .post(config.rates_url())
-            .body(quick_xml::se::to_string(&req_data).expect("xml serialization failed"))
+            .body(quick_xml::se::to_string(&req_data)?)
             .send()
             .await?
             .text()

@@ -95,7 +95,7 @@ impl Response {
                 reqwest::header::CONTENT_TYPE,
                 "application/soap+xml; charset=utf-8",
             )
-            .body(quick_xml::se::to_string(&req_data).expect("xml serialization failed"))
+            .body(quick_xml::se::to_string(&req_data)?)
             .send()
             .await?
             .text()

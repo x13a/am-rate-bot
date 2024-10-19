@@ -6,6 +6,7 @@ use std::fmt::Debug;
 
 pub mod acba;
 pub mod aeb;
+pub mod alfa_by;
 pub mod ameria;
 pub mod amio;
 pub mod ararat;
@@ -106,6 +107,7 @@ pub struct Config {
     pub vtb_am: vtb_am::Config,
     pub idpay: idpay::Config,
     pub kwikpay: kwikpay::Config,
+    pub alfa_by: alfa_by::Config,
 }
 
 impl Config {
@@ -134,9 +136,10 @@ impl Config {
             Source::Mir => self.mir.enabled,
             Source::MoEx => self.moex.enabled,
             Source::SAS => self.sas.enabled,
-            Source::UniBank => self.unibank.enabled,
-            Source::UniStream => self.unistream.enabled,
+            Source::Unibank => self.unibank.enabled,
+            Source::Unistream => self.unistream.enabled,
             Source::VtbAm => self.vtb_am.enabled,
+            Source::AlfaBy => self.alfa_by.enabled,
         }
     }
 }
@@ -228,8 +231,8 @@ pub enum Source {
     AEB,
     VtbAm,
     Artsakh,
-    UniBank,
-    UniStream,
+    Unibank,
+    Unistream,
     Amio,
     Byblos,
     IdBank,
@@ -240,25 +243,22 @@ pub enum Source {
     HSBC,
     Avosend,
     Kwikpay,
+    AlfaBy,
 }
 
 impl Source {
     pub fn prefix(&self) -> &str {
-        if self.is_bank() {
-            "*"
-        } else if *self == Self::CbAm {
+        if [Self::CbAm, Self::AlfaBy].contains(self) {
             "@"
+        } else if self.is_bank() {
+            "*"
         } else {
             "#"
         }
     }
 
     pub fn is_bank(&self) -> bool {
-        !Self::get_not_banks().contains(self)
-    }
-
-    pub fn get_not_banks() -> Vec<Self> {
-        [
+        ![
             Self::CbAm,
             Self::MoEx,
             Self::IdPay,
@@ -266,9 +266,9 @@ impl Source {
             Self::SAS,
             Self::Avosend,
             Self::Kwikpay,
-            Self::UniStream,
+            Self::Unistream,
         ]
-        .into()
+        .contains(self)
     }
 }
 
@@ -595,6 +595,14 @@ mod tests {
         let client = build_client()?;
         let config = load_config()?;
         let _: lsoft::Response = unistream::Response::get(&client, &config.unistream).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_alfa_by() -> anyhow::Result<()> {
+        let client = build_client()?;
+        let config = load_config()?;
+        let _: alfa_by::Response = alfa_by::Response::get(&client, &config.alfa_by).await?;
         Ok(())
     }
 }

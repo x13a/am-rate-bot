@@ -167,7 +167,7 @@ pub fn generate_conv_table(
     });
     let best_rate = table
         .iter()
-        .filter(|r| !Source::get_not_banks().contains(&r.src))
+        .filter(|r| r.src.is_bank() && r.src != Source::AlfaBy)
         .map(|r| r.rate)
         .next()
         .unwrap_or_default();
@@ -209,7 +209,7 @@ pub fn generate_conv_table(
                 .collect::<Vec<_>>()
                 .join("/"),
         )
-        .expect("panic");
+        .unwrap();
     }
     if s.is_empty() {
         DUNNO.into()
@@ -279,7 +279,7 @@ pub fn generate_src_table(
             "{:<buy_width$} | {:<sell_width$} | {}/{}",
             row.buy_str, row.sell_str, row.from, row.to,
         )
-        .expect("panic");
+        .unwrap();
     }
     if s.is_empty() {
         DUNNO.into()

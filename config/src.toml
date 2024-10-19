@@ -130,3 +130,8 @@ enabled = true
 # card
 commission_rate = 2.5
 req.id = "5"
+
+[alfa_by]
+rates_url = "https://www.alfabank.by/exchange/digital"
+enabled = true
+commission_rate = 1.0

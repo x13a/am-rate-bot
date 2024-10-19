@@ -1,7 +1,6 @@
 pub use crate::sources::SourceConfig as Config;
 use crate::sources::{Currency, Error, Rate, RateType, SourceConfigTrait};
-use select::document::Document;
-use select::predicate::Class;
+use select::{document::Document, predicate::Class};
 
 #[derive(Debug)]
 pub struct Response {

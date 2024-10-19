@@ -1,5 +1,5 @@
-pub use crate::sources::SourceConfig as Config;
-use crate::sources::{de, Currency, SourceConfigTrait};
+pub use crate::sources::RatesConfig as Config;
+use crate::sources::{de, Currency, RatesConfigTrait};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -74,33 +74,31 @@ pub mod request {
     }
 }
 
-impl Response {
-    pub async fn get<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Self>
-    where
-        T: SourceConfigTrait,
-    {
-        let req_data = request::Request {
-            xmlns_xsi: "http://www.w3.org/2001/XMLSchema-instance".into(),
-            xmlns_xsd: "http://www.w3.org/2001/XMLSchema".into(),
-            xmlns_soap12: "http://www.w3.org/2003/05/soap-envelope".into(),
-            soap12_body: request::Soap12Body {
-                exchange_rates_latest: request::ExchangeRatesLatest {
-                    xmlns: "http://www.cba.am/".into(),
-                },
+pub async fn get<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Response>
+where
+    T: RatesConfigTrait,
+{
+    let req_data = request::Request {
+        xmlns_xsi: "http://www.w3.org/2001/XMLSchema-instance".into(),
+        xmlns_xsd: "http://www.w3.org/2001/XMLSchema".into(),
+        xmlns_soap12: "http://www.w3.org/2003/05/soap-envelope".into(),
+        soap12_body: request::Soap12Body {
+            exchange_rates_latest: request::ExchangeRatesLatest {
+                xmlns: "http://www.cba.am/".into(),
             },
-        };
-        let xml = client
-            .post(config.rates_url())
-            .header(
-                reqwest::header::CONTENT_TYPE,
-                "application/soap+xml; charset=utf-8",
-            )
-            .body(quick_xml::se::to_string(&req_data)?)
-            .send()
-            .await?
-            .text()
-            .await?;
-        let resp = quick_xml::de::from_str(&xml)?;
-        Ok(resp)
-    }
+        },
+    };
+    let xml = client
+        .post(config.rates_url())
+        .header(
+            reqwest::header::CONTENT_TYPE,
+            "application/soap+xml; charset=utf-8",
+        )
+        .body(quick_xml::se::to_string(&req_data)?)
+        .send()
+        .await?
+        .text()
+        .await?;
+    let resp = quick_xml::de::from_str(&xml)?;
+    Ok(resp)
 }

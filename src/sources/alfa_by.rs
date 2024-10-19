@@ -50,21 +50,19 @@ pub struct RateValue {
     pub value: Decimal,
 }
 
-impl Response {
-    pub async fn get(client: &reqwest::Client, config: &Config) -> anyhow::Result<Self> {
-        let html = client
-            .get(config.rates_url.clone())
-            .send()
-            .await?
-            .text()
-            .await?;
-        let document = Document::from(html.as_str());
-        let div = document
-            .find(Attr("data-component", "ExchangePage"))
-            .next()
-            .ok_or(Error::Html)?;
-        let raw = div.attr("data-initial").ok_or(Error::Html)?;
-        let resp = serde_json::from_str(raw)?;
-        Ok(resp)
-    }
+pub async fn get(client: &reqwest::Client, config: &Config) -> anyhow::Result<Response> {
+    let html = client
+        .get(config.rates_url.clone())
+        .send()
+        .await?
+        .text()
+        .await?;
+    let document = Document::from(html.as_str());
+    let div = document
+        .find(Attr("data-component", "ExchangePage"))
+        .next()
+        .ok_or(Error::Html)?;
+    let raw = div.attr("data-initial").ok_or(Error::Html)?;
+    let resp = serde_json::from_str(raw)?;
+    Ok(resp)
 }

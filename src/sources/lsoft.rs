@@ -1,4 +1,4 @@
-use crate::sources::{de, Currency, SourceConfigTrait};
+use crate::sources::{de, Currency, RatesConfigTrait};
 use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -73,7 +73,7 @@ pub struct Config {
     pub req: request::Request,
 }
 
-impl SourceConfigTrait for Config {
+impl RatesConfigTrait for Config {
     fn rates_url(&self) -> String {
         self.rates_url.clone()
     }
@@ -89,33 +89,30 @@ impl LSoftRequest for Config {
     }
 }
 
-pub trait LSoftResponse {
-    #[allow(async_fn_in_trait)]
-    async fn get<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
-    where
-        T1: DeserializeOwned,
-        T2: SourceConfigTrait + LSoftRequest,
-    {
-        let req = config.req();
-        let req_data = request::Request {
-            client: "mobile".into(),
-            device: "android".into(),
-            handler: "aphena".into(),
-            lang: "1".into(),
-            operation: "getCurrencyList".into(),
-            accesstoken: "".into(),
-            id: req.id.clone(),
-            get_currency_list_parameters: Default::default(),
-            userid: "".into(),
-        };
-        let body = client
-            .post(config.rates_url())
-            .body(quick_xml::se::to_string(&req_data)?)
-            .send()
-            .await?
-            .text()
-            .await?;
-        let resp: T1 = quick_xml::de::from_str(&body)?;
-        Ok(resp)
-    }
+pub async fn get<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
+where
+    T1: DeserializeOwned,
+    T2: RatesConfigTrait + LSoftRequest,
+{
+    let req = config.req();
+    let req_data = request::Request {
+        client: "mobile".into(),
+        device: "android".into(),
+        handler: "aphena".into(),
+        lang: "1".into(),
+        operation: "getCurrencyList".into(),
+        accesstoken: "".into(),
+        id: req.id.clone(),
+        get_currency_list_parameters: Default::default(),
+        userid: "".into(),
+    };
+    let body = client
+        .post(config.rates_url())
+        .body(quick_xml::se::to_string(&req_data)?)
+        .send()
+        .await?
+        .text()
+        .await?;
+    let resp: T1 = quick_xml::de::from_str(&body)?;
+    Ok(resp)
 }

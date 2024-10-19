@@ -27,34 +27,32 @@ pub struct Config {
     pub req: Request,
 }
 
-impl Response {
-    pub async fn get(client: &reqwest::Client, config: &Config) -> anyhow::Result<Self> {
-        let req_data = Request {
-            country_code_from: config.req.country_code_from.clone(),
-            country_id_from: config.req.country_id_from,
-            country_code_to: config.req.country_code_to.clone(),
-            country_id_to: config.req.country_id_to,
-            currency_id_from: config.req.currency_id_from,
-            currency_id_to: config.req.currency_id_to,
-            summ_send: config.req.summ_send,
-            direction: config.req.direction.clone(),
-        };
-        let mut resp = client
-            .post(config.rates_url.clone())
-            .form(&req_data)
-            .header(
-                reqwest::header::CONTENT_TYPE,
-                "application/x-www-form-urlencoded",
-            )
-            .send()
-            .await?
-            .text()
-            .await?;
-        const CLOSE_SCRIPT_TAG: &str = "</script>";
-        if let Some(idx) = resp.find(CLOSE_SCRIPT_TAG) {
-            resp.drain(..idx + CLOSE_SCRIPT_TAG.len());
-        }
-        let resp = serde_json::from_str(&resp.trim())?;
-        Ok(resp)
+pub async fn get(client: &reqwest::Client, config: &Config) -> anyhow::Result<Response> {
+    let req_data = Request {
+        country_code_from: config.req.country_code_from.clone(),
+        country_id_from: config.req.country_id_from,
+        country_code_to: config.req.country_code_to.clone(),
+        country_id_to: config.req.country_id_to,
+        currency_id_from: config.req.currency_id_from,
+        currency_id_to: config.req.currency_id_to,
+        summ_send: config.req.summ_send,
+        direction: config.req.direction.clone(),
+    };
+    let mut resp = client
+        .post(config.rates_url.clone())
+        .form(&req_data)
+        .header(
+            reqwest::header::CONTENT_TYPE,
+            "application/x-www-form-urlencoded",
+        )
+        .send()
+        .await?
+        .text()
+        .await?;
+    const CLOSE_SCRIPT_TAG: &str = "</script>";
+    if let Some(idx) = resp.find(CLOSE_SCRIPT_TAG) {
+        resp.drain(..idx + CLOSE_SCRIPT_TAG.len());
     }
+    let resp = serde_json::from_str(&resp.trim())?;
+    Ok(resp)
 }

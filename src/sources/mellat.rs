@@ -1,5 +1,5 @@
-pub use crate::sources::SourceConfig as Config;
-use crate::sources::{de, Currency, JsonResponse};
+pub use crate::sources::RatesConfig as Config;
+use crate::sources::{de, Currency};
 use rust_decimal::serde::arbitrary_precision;
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -33,5 +33,3 @@ pub struct Data {
 pub struct Result {
     pub data: Vec<Data>,
 }
-
-impl JsonResponse for Response {}

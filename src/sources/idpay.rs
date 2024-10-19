@@ -1,5 +1,5 @@
-pub use crate::sources::idbank::Response;
-use crate::sources::SourceConfigTrait;
+pub use crate::sources::idbank::{get, Response};
+use crate::sources::RatesConfigTrait;
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -11,7 +11,7 @@ pub struct Config {
     pub commission_rate_to_ru_card: Decimal,
 }
 
-impl SourceConfigTrait for Config {
+impl RatesConfigTrait for Config {
     fn rates_url(&self) -> String {
         self.rates_url.clone()
     }

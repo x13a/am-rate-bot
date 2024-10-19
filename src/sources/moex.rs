@@ -78,28 +78,30 @@ pub struct Config {
     pub req: GetOrderBookRequest,
 }
 
-impl GetOrderBookResponse {
-    pub async fn get(client: &reqwest::Client, config: &Config) -> anyhow::Result<Self> {
-        let req_data = GetOrderBookRequest {
-            instrument_id: config.req.instrument_id.clone(),
-            depth: config.req.depth,
-        };
-        get(client, &config.base_url, &config.path_order_book, &req_data).await
-    }
+pub async fn get_order_book(
+    client: &reqwest::Client,
+    config: &Config,
+) -> anyhow::Result<GetOrderBookResponse> {
+    let req_data = GetOrderBookRequest {
+        instrument_id: config.req.instrument_id.clone(),
+        depth: config.req.depth,
+    };
+    _get(client, &config.base_url, &config.path_order_book, &req_data).await
 }
 
-impl CurrencyResponse {
-    pub async fn get(client: &reqwest::Client, config: &Config) -> anyhow::Result<Self> {
-        let req_data = InstrumentRequest {
-            id_type: InstrumentIdType::InstrumentIdTypeFigi,
-            class_code: "CETS".into(),
-            id: config.req.instrument_id.clone(),
-        };
-        get(client, &config.base_url, &config.path_currency, &req_data).await
-    }
+pub async fn get_currency(
+    client: &reqwest::Client,
+    config: &Config,
+) -> anyhow::Result<CurrencyResponse> {
+    let req_data = InstrumentRequest {
+        id_type: InstrumentIdType::InstrumentIdTypeFigi,
+        class_code: "CETS".into(),
+        id: config.req.instrument_id.clone(),
+    };
+    _get(client, &config.base_url, &config.path_currency, &req_data).await
 }
 
-async fn get<T1, T2>(
+async fn _get<T1, T2>(
     client: &reqwest::Client,
     base_url: &String,
     url_path: &String,

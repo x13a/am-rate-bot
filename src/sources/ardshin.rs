@@ -1,5 +1,5 @@
-pub use crate::sources::SourceConfig as Config;
-use crate::sources::{de, Currency as ModCurrency, JsonResponse};
+pub use crate::sources::RatesConfig as Config;
+use crate::sources::{de, Currency as ModCurrency};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -26,5 +26,3 @@ pub struct Currency {
     pub buy: Decimal,
     pub sell: Decimal,
 }
-
-impl JsonResponse for Response {}

@@ -1,8 +1,8 @@
 use crate::sources::{
     acba, aeb, alfa_by, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, avosend,
-    byblos, cb_am, converse, evoca, fast, hsbc, idbank, idpay, ineco, lsoft, mellat, mir, moex,
-    sas, unibank, unistream, vtb_am, Config, Currency, JsonResponse, LSoftResponse, Rate, RateType,
-    RateTypeJsonResponse, Source,
+    byblos, cb_am, converse, evoca, fast, get_json, get_json_for_rate_type, hsbc, idbank, idpay,
+    ineco, lsoft, mellat, mir, moex, sas, unibank, unistream, vtb_am, Config, Currency, Rate,
+    RateType, Source,
 };
 use anyhow::bail;
 use regex::Regex;
@@ -115,7 +115,7 @@ pub enum Error {
 }
 
 async fn collect_acba(client: &Client, config: &acba::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: acba::Response = acba::Response::get(client, config).await?;
+    let resp: acba::Response = get_json(client, config).await?;
     let rates = parse_acba(resp)?;
     Ok(rates)
 }
@@ -157,7 +157,7 @@ pub(crate) fn parse_acba(resp: acba::Response) -> anyhow::Result<Vec<Rate>> {
 async fn collect_ameria(client: &Client, config: &ameria::Config) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
-        let resp: armsoft::Response = ameria::Response::get(client, config, rate_type).await?;
+        let resp: ameria::Response = get_json_for_rate_type(client, config, rate_type).await?;
         let rates = collect_armsoft(resp, rate_type);
         results.extend_from_slice(&rates);
     }
@@ -178,7 +178,7 @@ fn collect_armsoft(resp: armsoft::Response, rate_type: RateType) -> Vec<Rate> {
 }
 
 async fn collect_ardshin(client: &Client, config: &ardshin::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: ardshin::Response = ardshin::Response::get(client, config).await?;
+    let resp: ardshin::Response = get_json(client, config).await?;
     let mut results = vec![];
     for (rate_type, rates) in [
         (RateType::NoCash, resp.data.currencies.no_cash),
@@ -203,7 +203,7 @@ async fn collect_arm_swiss(
     client: &Client,
     config: &arm_swiss::Config,
 ) -> anyhow::Result<Vec<Rate>> {
-    let resp: arm_swiss::Response = arm_swiss::Response::get(client, config).await?;
+    let resp: arm_swiss::Response = get_json(client, config).await?;
     let mut rates = vec![];
     let to = Currency::default();
     for rate in resp.lmasbrate {
@@ -238,7 +238,7 @@ async fn collect_arm_swiss(
 }
 
 async fn collect_cb_am(client: &Client, config: &cb_am::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp = cb_am::Response::get(client, config).await?;
+    let resp = cb_am::get(client, config).await?;
     let rates = resp
         .soap_body
         .exchange_rates_latest_response
@@ -263,7 +263,7 @@ async fn collect_cb_am(client: &Client, config: &cb_am::Config) -> anyhow::Resul
 async fn collect_evoca(client: &Client, config: &evoca::Config) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
-        let resp: armsoft::Response = evoca::Response::get(client, config, rate_type).await?;
+        let resp: evoca::Response = get_json_for_rate_type(client, config, rate_type).await?;
         let rates = collect_armsoft(resp, rate_type);
         results.extend_from_slice(&rates);
     }
@@ -273,7 +273,7 @@ async fn collect_evoca(client: &Client, config: &evoca::Config) -> anyhow::Resul
 async fn collect_fast(client: &Client, config: &fast::Config) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
-        let resp: fast::Response = fast::Response::get(client, config, rate_type).await?;
+        let resp: fast::Response = get_json_for_rate_type(client, config, rate_type).await?;
         let rates = resp
             .rates
             .iter()
@@ -291,7 +291,7 @@ async fn collect_fast(client: &Client, config: &fast::Config) -> anyhow::Result<
 }
 
 async fn collect_ineco(client: &Client, config: &ineco::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: ineco::Response = ineco::Response::get(client, config).await?;
+    let resp: ineco::Response = get_json(client, config).await?;
     let mut rates = vec![];
     let to = Currency::default();
     for item in resp.items {
@@ -315,7 +315,7 @@ async fn collect_ineco(client: &Client, config: &ineco::Config) -> anyhow::Resul
 }
 
 async fn collect_mellat(client: &Client, config: &mellat::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: mellat::Response = mellat::Response::get(client, config).await?;
+    let resp: mellat::Response = get_json(client, config).await?;
     let mut rates = vec![];
     let to = Currency::default();
     for rate in resp.result.data {
@@ -339,7 +339,7 @@ async fn collect_mellat(client: &Client, config: &mellat::Config) -> anyhow::Res
 }
 
 async fn collect_converse(client: &Client, config: &converse::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: converse::Response = converse::Response::get(client, config).await?;
+    let resp: converse::Response = get_json(client, config).await?;
     let mut results = vec![];
     for (rate_type, rates) in [
         (RateType::NoCash, resp.non_cash),
@@ -362,7 +362,7 @@ async fn collect_converse(client: &Client, config: &converse::Config) -> anyhow:
 }
 
 async fn collect_aeb(client: &Client, config: &aeb::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: aeb::Response = aeb::Response::get(client, config).await?;
+    let resp: aeb::Response = get_json(client, config).await?;
     let mut rates = vec![];
     for item in resp.rate_currency_settings {
         for rate in item
@@ -383,18 +383,18 @@ async fn collect_aeb(client: &Client, config: &aeb::Config) -> anyhow::Result<Ve
 }
 
 async fn collect_vtb_am(client: &Client, config: &vtb_am::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: vtb_am::Response = vtb_am::Response::get(client, config).await?;
+    let resp: vtb_am::Response = vtb_am::get(client, config).await?;
     Ok(resp.rates)
 }
 
 async fn collect_artsakh(client: &Client, config: &artsakh::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: lsoft::Response = artsakh::Response::get(client, config).await?;
+    let resp: artsakh::Response = artsakh::get(client, config).await?;
     let rates = collect_lsoft(resp)?;
     Ok(rates)
 }
 
 async fn collect_unibank(client: &Client, config: &unibank::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: lsoft::Response = unibank::Response::get(client, config).await?;
+    let resp: unibank::Response = unibank::get(client, config).await?;
     let rates = collect_lsoft(resp)?;
     Ok(rates)
 }
@@ -425,7 +425,7 @@ fn collect_lsoft(resp: lsoft::Response) -> anyhow::Result<Vec<Rate>> {
 async fn collect_amio(client: &Client, config: &amio::Config) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
-        let resp: armsoft::Response = amio::Response::get(client, config, rate_type).await?;
+        let resp: amio::Response = get_json_for_rate_type(client, config, rate_type).await?;
         let rates = collect_armsoft(resp, rate_type);
         results.extend_from_slice(&rates);
     }
@@ -435,7 +435,7 @@ async fn collect_amio(client: &Client, config: &amio::Config) -> anyhow::Result<
 async fn collect_byblos(client: &Client, config: &byblos::Config) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
-        let resp: armsoft::Response = byblos::Response::get(client, config, rate_type).await?;
+        let resp: byblos::Response = get_json_for_rate_type(client, config, rate_type).await?;
         let rates = collect_armsoft(resp, rate_type);
         results.extend_from_slice(&rates);
     }
@@ -443,7 +443,7 @@ async fn collect_byblos(client: &Client, config: &byblos::Config) -> anyhow::Res
 }
 
 async fn collect_idbank(client: &Client, config: &idbank::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: idbank::Response = idbank::Response::get(client, config).await?;
+    let resp: idbank::Response = idbank::get(client, config).await?;
     let mut rates = vec![];
     let to = Currency::default();
     for rate in resp.result.currency_rate {
@@ -467,9 +467,8 @@ async fn collect_idbank(client: &Client, config: &idbank::Config) -> anyhow::Res
 }
 
 async fn collect_moex(client: &Client, config: &moex::Config) -> anyhow::Result<Vec<Rate>> {
-    let currency: moex::CurrencyResponse = moex::CurrencyResponse::get(client, config).await?;
-    let order_book: moex::GetOrderBookResponse =
-        moex::GetOrderBookResponse::get(client, config).await?;
+    let currency: moex::CurrencyResponse = moex::get_currency(client, config).await?;
+    let order_book: moex::GetOrderBookResponse = moex::get_order_book(client, config).await?;
     let to_decimal = |units: String, nano: i32| format!("{}.{}", units, nano).parse::<Decimal>();
     let mut rate_buy = None;
     let mut rate_sell = None;
@@ -505,7 +504,7 @@ async fn collect_moex(client: &Client, config: &moex::Config) -> anyhow::Result<
 async fn collect_ararat(client: &Client, config: &ararat::Config) -> anyhow::Result<Vec<Rate>> {
     let mut results = vec![];
     for rate_type in [RateType::NoCash, RateType::Cash] {
-        let resp: armsoft::Response = ararat::Response::get(client, config, rate_type).await?;
+        let resp: ararat::Response = get_json_for_rate_type(client, config, rate_type).await?;
         let rates = collect_armsoft(resp, rate_type);
         results.extend_from_slice(&rates);
     }
@@ -513,7 +512,7 @@ async fn collect_ararat(client: &Client, config: &ararat::Config) -> anyhow::Res
 }
 
 async fn collect_idpay(client: &Client, config: &idpay::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: idpay::Response = idpay::Response::get(client, config).await?;
+    let resp: idpay::Response = idpay::get(client, config).await?;
     let to = Currency::default();
     let from = Currency::rub();
     let Some(rate) = resp
@@ -571,7 +570,7 @@ fn percent(value: Decimal, from: Decimal) -> Decimal {
 }
 
 async fn collect_mir(client: &Client, config: &mir::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: mir::Response = mir::Response::get(client, config).await?;
+    let resp: mir::Response = get_json(client, config).await?;
     let to = Currency::default();
     let Some(rate) = resp
         .content
@@ -602,17 +601,17 @@ async fn collect_mir(client: &Client, config: &mir::Config) -> anyhow::Result<Ve
 }
 
 async fn collect_sas(client: &Client, config: &sas::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: sas::Response = sas::Response::get(client, config).await?;
+    let resp: sas::Response = sas::get(client, config).await?;
     Ok(resp.rates)
 }
 
 async fn collect_hsbc(client: &Client, config: &hsbc::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: hsbc::Response = hsbc::Response::get(client, config).await?;
+    let resp: hsbc::Response = hsbc::get(client, config).await?;
     Ok(resp.rates)
 }
 
 async fn collect_avosend(client: &Client, config: &avosend::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: avosend::Response = avosend::Response::get(client, config).await?;
+    let resp: avosend::Response = avosend::get(client, config).await?;
     Ok(vec![Rate {
         from: Currency::rub(),
         to: Currency::default(),
@@ -626,7 +625,7 @@ async fn collect_unistream(
     client: &Client,
     config: &unistream::Config,
 ) -> anyhow::Result<Vec<Rate>> {
-    let resp: lsoft::Response = unistream::Response::get(client, config).await?;
+    let resp: unistream::Response = unistream::get(client, config).await?;
     let rates = collect_lsoft(resp)?;
     let from = Currency::rub();
     let Some(rate) = rates
@@ -656,7 +655,7 @@ async fn collect_unistream(
 }
 
 async fn collect_alfa_by(client: &Client, config: &alfa_by::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: alfa_by::Response = alfa_by::Response::get(client, config).await?;
+    let resp: alfa_by::Response = alfa_by::get(client, config).await?;
     let Some(item) = resp.initial_items.iter().next() else {
         bail!(Error::NoRates);
     };

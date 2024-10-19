@@ -1,5 +1,5 @@
-pub use crate::sources::SourceConfig as Config;
-use crate::sources::{de, Currency, JsonResponse, RateType};
+pub use crate::sources::RatesConfig as Config;
+use crate::sources::{de, Currency, RateType};
 use rust_decimal::serde::arbitrary_precision_option;
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -30,5 +30,3 @@ pub struct Rate {
     #[serde(rename = "type", deserialize_with = "de::rate_type")]
     pub rate_type: RateType,
 }
-
-impl JsonResponse for Response {}

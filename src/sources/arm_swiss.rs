@@ -1,5 +1,4 @@
-use crate::sources::JsonResponse;
-pub use crate::sources::SourceConfig as Config;
+pub use crate::sources::RatesConfig as Config;
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -21,5 +20,3 @@ pub struct LmasbRate {
     #[serde(rename = "OFFER_cash")]
     pub offer_cash: Decimal,
 }
-
-impl JsonResponse for Response {}

@@ -1,5 +1,5 @@
-pub use crate::sources::SourceConfig as Config;
-use crate::sources::{de, Currency, SourceConfigTrait};
+pub use crate::sources::RatesConfig as Config;
+use crate::sources::{de, Currency, RatesConfigTrait};
 use reqwest::Client;
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -37,18 +37,16 @@ pub struct CurrencyRate {
     pub sell: Option<Decimal>,
 }
 
-impl Response {
-    pub async fn get<T>(client: &Client, config: &T) -> anyhow::Result<Self>
-    where
-        T: SourceConfigTrait,
-    {
-        let resp = client
-            .post(config.rates_url())
-            .header(reqwest::header::CONTENT_LENGTH, 0)
-            .send()
-            .await?
-            .json()
-            .await?;
-        Ok(resp)
-    }
+pub async fn get<T>(client: &Client, config: &T) -> anyhow::Result<Response>
+where
+    T: RatesConfigTrait,
+{
+    let resp = client
+        .post(config.rates_url())
+        .header(reqwest::header::CONTENT_LENGTH, 0)
+        .send()
+        .await?
+        .json()
+        .await?;
+    Ok(resp)
 }

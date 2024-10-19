@@ -267,12 +267,10 @@ pub async fn run(db: Arc<Storage>, opts: Opts) -> anyhow::Result<()> {
     if is_polling {
         dispatcher.dispatch().await;
     } else {
-        let host = env::var(ENV_HOST).expect("panic");
-        let port = env::var(ENV_PORT).expect("panic").parse().expect("panic");
-        let cert = env::var(ENV_CERT).expect("panic");
-        let url = format!("https://{host}/am-rate-bot/webhook/")
-            .parse()
-            .expect("panic");
+        let host = env::var(ENV_HOST)?;
+        let port = env::var(ENV_PORT)?.parse()?;
+        let cert = env::var(ENV_CERT)?;
+        let url = format!("https://{host}/am-rate-bot/webhook/").parse()?;
         let listener = webhooks::axum(
             bot.clone(),
             webhooks::Options {

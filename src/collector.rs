@@ -1,8 +1,8 @@
 use crate::sources::{
     acba, aeb, alfa_by, ameria, amio, ararat, ardshin, arm_swiss, armsoft, artsakh, avosend,
-    byblos, cb_am, converse, evoca, fast, hsbc, idbank, idpay, ineco, kwikpay, lsoft, mellat, mir,
-    moex, sas, unibank, unistream, vtb_am, Config, Currency, JsonResponse, LSoftResponse, Rate,
-    RateType, RateTypeJsonResponse, Source,
+    byblos, cb_am, converse, evoca, fast, hsbc, idbank, idpay, ineco, lsoft, mellat, mir, moex,
+    sas, unibank, unistream, vtb_am, Config, Currency, JsonResponse, LSoftResponse, Rate, RateType,
+    RateTypeJsonResponse, Source,
 };
 use anyhow::bail;
 use regex::Regex;
@@ -102,7 +102,6 @@ async fn collect(client: &Client, config: &Config, src: Source) -> anyhow::Resul
         Source::SAS => collect_sas(client, &config.sas).await?,
         Source::HSBC => collect_hsbc(client, &config.hsbc).await?,
         Source::Avosend => collect_avosend(client, &config.avosend).await?,
-        Source::Kwikpay => collect_kwikpay(client, &config.kwikpay).await?,
         Source::Unistream => collect_unistream(client, &config.unistream).await?,
         Source::AlfaBy => collect_alfa_by(client, &config.alfa_by).await?,
     };
@@ -623,29 +622,6 @@ async fn collect_avosend(client: &Client, config: &avosend::Config) -> anyhow::R
     }])
 }
 
-async fn collect_kwikpay(client: &Client, config: &kwikpay::Config) -> anyhow::Result<Vec<Rate>> {
-    let resp: lsoft::Response = kwikpay::Response::get(client, config).await?;
-    let rates = collect_lsoft(resp)?;
-    let from = Currency::rub();
-    let Some(rate) = rates
-        .iter()
-        .filter(|v| v.rate_type == RateType::Cash && v.from == from)
-        .next()
-    else {
-        bail!(Error::NoRates);
-    };
-    let Some(buy) = rate.buy else {
-        bail!(Error::NoRates);
-    };
-    Ok(vec![Rate {
-        from: from.clone(),
-        to: Currency::default(),
-        rate_type: RateType::NoCash,
-        buy: Some(buy - percent(config.commission_rate, buy)),
-        sell: None,
-    }])
-}
-
 async fn collect_unistream(
     client: &Client,
     config: &unistream::Config,
@@ -951,14 +927,6 @@ mod tests {
         let client = build_client()?;
         let config = load_src_config()?;
         collect(&client, &config, Source::Avosend).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_collect_kwikpay() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_src_config()?;
-        collect(&client, &config, Source::Kwikpay).await?;
         Ok(())
     }
 

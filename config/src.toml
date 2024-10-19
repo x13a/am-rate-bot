@@ -124,13 +124,6 @@ commission_rate = 0.9
 # idpay > ru_card
 commission_rate_to_ru_card = 0.3
 
-[kwikpay]
-rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
-enabled = true
-# card
-commission_rate = 2.5
-req.id = "5"
-
 [alfa_by]
 rates_url = "https://www.alfabank.by/exchange/digital"
 enabled = true

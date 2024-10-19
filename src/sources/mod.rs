@@ -24,7 +24,6 @@ pub mod hsbc;
 pub mod idbank;
 pub mod idpay;
 pub mod ineco;
-pub mod kwikpay;
 pub mod lsoft;
 pub mod mellat;
 pub mod mir;
@@ -106,7 +105,6 @@ pub struct Config {
     pub unistream: unistream::Config,
     pub vtb_am: vtb_am::Config,
     pub idpay: idpay::Config,
-    pub kwikpay: kwikpay::Config,
     pub alfa_by: alfa_by::Config,
 }
 
@@ -131,7 +129,6 @@ impl Config {
             Source::IdBank => self.idbank.enabled,
             Source::IdPay => self.idpay.enabled,
             Source::Ineco => self.ineco.enabled,
-            Source::Kwikpay => self.kwikpay.enabled,
             Source::Mellat => self.mellat.enabled,
             Source::Mir => self.mir.enabled,
             Source::MoEx => self.moex.enabled,
@@ -242,7 +239,6 @@ pub enum Source {
     SAS,
     HSBC,
     Avosend,
-    Kwikpay,
     AlfaBy,
 }
 
@@ -265,7 +261,6 @@ impl Source {
             Self::Mir,
             Self::SAS,
             Self::Avosend,
-            Self::Kwikpay,
             Self::Unistream,
         ]
         .contains(self)
@@ -579,14 +574,6 @@ mod tests {
         let client = build_client()?;
         let config = load_config()?;
         let _: avosend::Response = avosend::Response::get(&client, &config.avosend).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_kwikpay() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: lsoft::Response = kwikpay::Response::get(&client, &config.kwikpay).await?;
         Ok(())
     }
 

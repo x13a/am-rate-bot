@@ -3,23 +3,23 @@ use crate::source::{de, get_json, Currency as ModCurrency, Rate, RateType};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Response {
     pub data: Data,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Data {
     pub currencies: Currencies,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Currencies {
-    pub cash: Vec<Currency>,
-    pub no_cash: Vec<Currency>,
+    pub cash: Vec<Option<Currency>>,
+    pub no_cash: Vec<Option<Currency>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Currency {
     #[serde(rename = "type", deserialize_with = "de::currency")]
     pub curr_type: ModCurrency,
@@ -36,6 +36,8 @@ pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Resul
     ] {
         let rates = rates
             .iter()
+            .cloned()
+            .filter_map(|v| v)
             .map(|v| Rate {
                 from: v.curr_type.clone(),
                 to: ModCurrency::default(),

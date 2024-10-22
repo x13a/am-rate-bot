@@ -46,7 +46,6 @@ fn find_all_paths(
     from: Currency,
     to: Currency,
 ) -> Vec<(Vec<Currency>, Decimal)> {
-    assert_ne!(from, to);
     let mut paths = Vec::new();
     let mut path = Vec::new();
     let mut visited = HashSet::new();
@@ -250,10 +249,7 @@ pub fn generate_src_table(
     let mut buy_width: usize = 0;
     let mut sell_width: usize = 0;
     const NO_RATE: &str = "-";
-    for rate in rates
-        .iter()
-        .filter(|v| v.rate_type == rate_type && v.from != v.to)
-    {
+    for rate in rates.iter().filter(|v| v.rate_type == rate_type) {
         let buy_str = match rate.buy {
             Some(buy) => decimal_to_string(buy, RATE_DP),
             _ => NO_RATE.to_string(),

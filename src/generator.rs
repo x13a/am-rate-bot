@@ -166,7 +166,15 @@ pub fn generate_conv_table(
     });
     let best_rate = table
         .iter()
-        .filter(|r| r.src.is_bank() && r.src != Source::AlfaBy)
+        .filter(|r| {
+            #[allow(unused_mut)]
+            let mut res = r.src.is_bank();
+            #[cfg(feature = "alfa_by")]
+            {
+                res = res && r.src != Source::AlfaBy;
+            }
+            res
+        })
         .map(|r| r.rate)
         .next()
         .unwrap_or_default();

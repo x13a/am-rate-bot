@@ -2,12 +2,15 @@ use anyhow::ensure;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{de::DeserializeOwned, Deserialize};
-use std::{collections::HashMap, env, fmt::Debug};
+#[cfg(feature = "moex")]
+use std::env;
+use std::{collections::HashMap, fmt::Debug};
 use strum::{EnumCount, IntoEnumIterator};
 use tokio::sync::mpsc;
 
 pub mod acba;
 pub mod aeb;
+#[cfg(feature = "alfa_by")]
 pub mod alfa_by;
 pub mod ameria;
 pub mod amio;
@@ -29,6 +32,7 @@ pub mod ineco;
 pub mod lsoft;
 pub mod mellat;
 pub mod mir;
+#[cfg(feature = "moex")]
 pub mod moex;
 pub mod sas;
 pub mod unibank;
@@ -105,12 +109,14 @@ pub struct Config {
     pub ineco: ineco::Config,
     pub mellat: mellat::Config,
     pub mir: mir::Config,
+    #[cfg(feature = "moex")]
     pub moex: moex::Config,
     pub sas: sas::Config,
     pub unibank: unibank::Config,
     pub unistream: unistream::Config,
     pub vtb_am: vtb_am::Config,
     pub idpay: idpay::Config,
+    #[cfg(feature = "alfa_by")]
     pub alfa_by: alfa_by::Config,
 }
 
@@ -137,11 +143,13 @@ impl Config {
             Source::Ineco => self.ineco.enabled,
             Source::Mellat => self.mellat.enabled,
             Source::Mir => self.mir.enabled,
+            #[cfg(feature = "moex")]
             Source::MoEx => self.moex.enabled,
             Source::SAS => self.sas.enabled,
             Source::Unibank => self.unibank.enabled,
             Source::Unistream => self.unistream.enabled,
             Source::VtbAm => self.vtb_am.enabled,
+            #[cfg(feature = "alfa_by")]
             Source::AlfaBy => self.alfa_by.enabled,
         }
     }
@@ -225,6 +233,7 @@ mod de {
 #[strum(ascii_case_insensitive)]
 pub enum Source {
     CbAm,
+    #[cfg(feature = "moex")]
     MoEx,
     Acba,
     Ameria,
@@ -249,12 +258,19 @@ pub enum Source {
     SAS,
     HSBC,
     Avosend,
+    #[cfg(feature = "alfa_by")]
     AlfaBy,
 }
 
 impl Source {
     pub fn prefix(&self) -> &str {
-        if [Self::CbAm, Self::AlfaBy].contains(self) {
+        if [
+            Self::CbAm,
+            #[cfg(feature = "alfa_by")]
+            Self::AlfaBy,
+        ]
+        .contains(self)
+        {
             "@"
         } else if self.is_bank() {
             "*"
@@ -266,6 +282,7 @@ impl Source {
     pub fn is_bank(&self) -> bool {
         ![
             Self::CbAm,
+            #[cfg(feature = "moex")]
             Self::MoEx,
             Self::IdPay,
             Self::Mir,
@@ -357,6 +374,7 @@ pub async fn collect_all(
     let mut results = HashMap::new();
     let (tx, mut rx) = mpsc::channel(Source::COUNT);
     for src in Source::iter().filter(|v| config.is_enabled_for(*v)) {
+        #[cfg(feature = "moex")]
         if src == Source::MoEx {
             if env::var(moex::ENV_TINKOFF_TOKEN)
                 .unwrap_or_default()
@@ -430,6 +448,7 @@ pub async fn collect(
         Source::Amio => amio::collect(client, &config.amio).await?,
         Source::Byblos => byblos::collect(client, &config.byblos).await?,
         Source::IdBank => idbank::collect(client, &config.idbank).await?,
+        #[cfg(feature = "moex")]
         Source::MoEx => moex::collect(client, &config.moex).await?,
         Source::Ararat => ararat::collect(client, &config.ararat).await?,
         Source::IdPay => idpay::collect(client, &config.idpay).await?,
@@ -438,6 +457,7 @@ pub async fn collect(
         Source::HSBC => hsbc::collect(client, &config.hsbc).await?,
         Source::Avosend => avosend::collect(client, &config.avosend).await?,
         Source::Unistream => unistream::collect(client, &config.unistream).await?,
+        #[cfg(feature = "alfa_by")]
         Source::AlfaBy => alfa_by::collect(client, &config.alfa_by).await?,
     };
     Ok(rates)
@@ -576,8 +596,8 @@ mod tests {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    #[cfg_attr(feature = "moex", tokio::test)]
+    #[cfg(feature = "moex")]
+    #[tokio::test]
     async fn test_moex() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
         let _ = collect(&client, &CFG.src, Source::MoEx).await?;
@@ -606,7 +626,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(feature = "github", ignore)]
+    #[cfg_attr(feature = "github_ci", ignore)]
     async fn test_sas() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
         let _ = collect(&client, &CFG.src, Source::SAS).await?;
@@ -634,6 +654,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "alfa_by")]
     #[tokio::test]
     async fn test_alfa_by() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;

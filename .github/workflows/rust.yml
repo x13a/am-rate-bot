@@ -23,9 +23,9 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Build
-      run: cargo build --verbose --features "github moex"
+      run: cargo build --verbose --features github_ci
 
     - name: Run tests
-      run: cargo test --verbose --features "github moex"
+      run: cargo test --verbose --features github_ci
       env:
         TINKOFF_TOKEN: ${{ secrets.TINKOFF_TOKEN }}

@@ -16,5 +16,6 @@ docker:
 docker-clean:
 	docker rmi $(NAME)
 
-fix-config:
+fix-perm:
 	chmod 600 ./config/*.env
+	chmod 600 ./certs/*.key

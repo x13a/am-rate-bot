@@ -8,7 +8,7 @@ Armenia currency exchange rates telegram bot.
 ## Setup
 
 ```shell
-make fix-config
+make fix-perm
 ```
 
 You have to set `TELOXIDE_TOKEN` env to your telegram bot token in `config/bot.env`.

@@ -17,4 +17,4 @@ docker-clean:
 	docker rmi $(NAME)
 
 fix-config:
-	chmod 600 ./config/bot.env
+	chmod 600 ./config/*.env

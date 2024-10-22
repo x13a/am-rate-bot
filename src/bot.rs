@@ -1,7 +1,7 @@
 use crate::{
     generator::{generate_conv_table, generate_src_table},
-    sources::{Currency, Rate, RateType, Source},
-    Opts, DUNNO,
+    source::{Currency, Rate, RateType, Source},
+    Config, DUNNO,
 };
 use chrono::{DateTime, Utc};
 use std::{collections::HashMap, env, str::FromStr, sync::Arc, time::SystemTime};
@@ -23,10 +23,6 @@ use teloxide::{
 use tokio::sync::Mutex;
 
 type Bot = DefaultParseMode<Throttle<teloxide::Bot>>;
-const ENV_POLLING: &str = "POLLING";
-const ENV_HOST: &str = "HOST";
-const ENV_PORT: &str = "PORT";
-const ENV_CERT: &str = "CERT";
 const WELCOME_MSG: &str = "Meow!";
 
 #[derive(Debug)]
@@ -248,7 +244,7 @@ enum Command {
     Start(String),
 }
 
-pub async fn run(db: Arc<Storage>, opts: Opts) -> anyhow::Result<()> {
+pub async fn run(db: Arc<Storage>, cfg: Arc<Config>) -> anyhow::Result<()> {
     let bot = teloxide::Bot::from_env()
         .throttle(Limits::default())
         .parse_mode(ParseMode::Html);
@@ -259,25 +255,21 @@ pub async fn run(db: Arc<Storage>, opts: Opts) -> anyhow::Result<()> {
             .endpoint(command),
     );
     let mut dispatcher = Dispatcher::builder(bot.clone(), handler)
-        .dependencies(dptree::deps![db, opts])
+        .dependencies(dptree::deps![db, cfg.clone()])
         .enable_ctrlc_handler()
         .default_handler(|_| async move {})
         .build();
-    let is_polling = env::var(ENV_POLLING)?.parse()?;
-    if is_polling {
+    if cfg.bot.polling {
         dispatcher.dispatch().await;
     } else {
-        let host = env::var(ENV_HOST)?;
-        let port = env::var(ENV_PORT)?.parse()?;
-        let cert = env::var(ENV_CERT)?;
-        let url = format!("https://{host}/am-rate-bot/webhook/").parse()?;
+        let url = format!("https://{}/am-rate-bot/webhook/", cfg.bot.webhook.host).parse()?;
         let listener = webhooks::axum(
             bot.clone(),
             webhooks::Options {
-                address: ([0, 0, 0, 0], port).into(),
+                address: ([0, 0, 0, 0], cfg.bot.webhook.port).into(),
                 url,
                 path: "/".into(),
-                certificate: Some(InputFile::file(cert)),
+                certificate: Some(InputFile::file(&cfg.bot.webhook.cert)),
                 max_connections: None,
                 drop_pending_updates: false,
                 secret_token: None,
@@ -298,7 +290,7 @@ async fn command(
     msg: Message,
     cmd: Command,
     db: Arc<Storage>,
-    opts: Opts,
+    cfg: Arc<Config>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     match cmd {
         Command::Help => {
@@ -448,7 +440,7 @@ async fn command(
             ls_repl(bot, msg).await?;
         }
         Command::Info => {
-            info_repl(bot, msg, db, opts).await?;
+            info_repl(bot, msg, db, cfg).await?;
         }
     }
     Ok(())
@@ -514,11 +506,11 @@ async fn info_repl(
     bot: Bot,
     msg: Message,
     db: Arc<Storage>,
-    opts: Opts,
+    cfg: Arc<Config>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
     let updated_at = db.get_updated_at().await;
-    let update_interval = opts.update_interval;
+    let update_interval = cfg.bot.update_interval;
     let lines = [
         format!("version: {VERSION}"),
         format!("update_interval: {update_interval}"),
@@ -574,7 +566,7 @@ async fn conv_repl(
         let s = match cached {
             Some(s) => s,
             None => {
-                log::debug!("empty cache from to");
+                log::debug!("empty cache conv");
                 let s = generate_conv_table(from.clone(), to.clone(), &rates, rate_type, is_inv);
                 db.set_cache_conv(from.clone(), to.clone(), rate_type, is_inv, s.clone())
                     .await;

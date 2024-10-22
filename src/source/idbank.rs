@@ -1,6 +1,5 @@
-pub use crate::sources::RatesConfig as Config;
-use crate::sources::{de, Currency, RatesConfigTrait};
-use reqwest::Client;
+pub use crate::source::BaseConfig as Config;
+use crate::source::{de, BaseConfigTrait, Currency, Rate, RateType, USER_AGENT};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -37,16 +36,41 @@ pub struct CurrencyRate {
     pub sell: Option<Decimal>,
 }
 
-pub async fn get<T>(client: &Client, config: &T) -> anyhow::Result<Response>
+pub(crate) async fn post<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Response>
 where
-    T: RatesConfigTrait,
+    T: BaseConfigTrait,
 {
     let resp = client
         .post(config.rates_url())
         .header(reqwest::header::CONTENT_LENGTH, 0)
+        .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send()
         .await?
         .json()
         .await?;
     Ok(resp)
+}
+
+pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Result<Vec<Rate>> {
+    let resp: Response = post(client, config).await?;
+    let mut rates = vec![];
+    let to = Currency::default();
+    for rate in resp.result.currency_rate {
+        let from = rate.iso_txt;
+        rates.push(Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::NoCash,
+            buy: rate.buy,
+            sell: rate.sell,
+        });
+        rates.push(Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::Cash,
+            buy: rate.csh_buy,
+            sell: rate.csh_sell,
+        });
+    }
+    Ok(rates)
 }

@@ -5,7 +5,7 @@ build:
 	cargo build --locked --release --bins
 
 test:
-	cargo test $(filter)
+	cargo test $(args)
 
 clean:
 	cargo clean

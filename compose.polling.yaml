@@ -7,4 +7,4 @@ services:
     env_file:
       - './config/bot.env'
     volumes:
-      - './config/src.toml:/config/src.toml:ro'
+      - './config/config.toml:/config/config.toml:ro'

@@ -1,37 +1,47 @@
-[acba]
+[bot]
+polling = true
+reqwest_timeout = 10
+update_interval = 180
+
+[bot.webhook]
+host = ""
+port = 8000
+cert = "./certs/cert.pem"
+
+[src.acba]
 rates_url = "https://www.acbadigital.am/api/en/v2/rates"
 enabled = true
 
-[aeb]
+[src.aeb]
 rates_url = "https://mobile.aeb.am/mobile-proxy-exchange-rates/rate-settings"
 enabled = true
 
-[ameria]
+[src.ameria]
 rates_url = "https://online.ameriabank.am/InternetBank/Api/exchangeRates/"
 enabled = true
 
-[amio]
+[src.amio]
 rates_url = "https://internetbank.amiobank.am/InternetBank/api/exchangeRates/"
 enabled = true
 
-[ararat]
+[src.ararat]
 rates_url = "https://direct.araratbank.am/InternetBank/Api/exchangeRates/"
 enabled = true
 
-[ardshin]
+[src.ardshin]
 rates_url = "https://website-api.ardshinbank.am/currency"
 enabled = true
 
-[arm_swiss]
+[src.arm_swiss]
 rates_url = "https://www.armswissbank.am/include/ajax.php"
 enabled = true
 
-[artsakh]
+[src.artsakh]
 rates_url = "https://m.artsakhbank.am:9443/get_ART.php"
 enabled = true
 req.id = "6"
 
-[avosend]
+[src.avosend]
 rates_url = "https://avosend.com/api/comission.php"
 enabled = true
 
@@ -46,47 +56,47 @@ req.currency_id_to = 51
 req.summ_send = 10000
 req.direction = "from"
 
-[byblos]
+[src.byblos]
 rates_url = "https://online.byblosbankarmenia.am/InternetBank/api/exchangeRates/"
 enabled = true
 
-[cb_am]
+[src.cb_am]
 rates_url = "https://api.cba.am/exchangerates.asmx"
 enabled = true
 
-[converse]
+[src.converse]
 rates_url = "https://sapi.conversebank.am/api/v2/currencyrates"
 enabled = true
 
-[evoca]
+[src.evoca]
 rates_url = "https://online.evocabank.am/InternetBank/Api/exchangeRates/"
 enabled = true
 
-[fast]
+[src.fast]
 rates_url = "https://mobileapi.fcc.am/FCBank.Mobile.Api_V2/api/publicInfo/getRates?langID=2&payType="
 enabled = true
 
-[hsbc]
+[src.hsbc]
 rates_url = "https://www.hsbc.am/en-am/help/rates/"
 enabled = true
 
-[idbank]
+[src.idbank]
 rates_url = "https://www.idbanking.am/api/MyInfo/getCurrencyRateMobile"
 enabled = true
 
-[ineco]
+[src.ineco]
 rates_url = "https://www.inecobank.am/api/rates"
 enabled = true
 
-[mellat]
+[src.mellat]
 rates_url = "https://api.mellatbank.am/api/v1/rate/list"
 enabled = true
 
-[mir]
+[src.mir]
 rates_url = "https://api-user.vamprivet.ru/backend/api/v2/currencies/rates"
 enabled = true
 
-[moex]
+[src.moex]
 base_url = "https://invest-public-api.tinkoff.ru/rest"
 path_order_book = "tinkoff.public.invest.api.contract.v1.MarketDataService/GetOrderBook"
 path_currency = "tinkoff.public.invest.api.contract.v1.InstrumentsService/CurrencyBy"
@@ -96,16 +106,16 @@ enabled = true
 req.instrument_id = "BBG0013J7V24"
 req.depth = 1
 
-[sas]
+[src.sas]
 rates_url = "https://www.sas.am/app/"
 enabled = true
 
-[unibank]
+[src.unibank]
 rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
 enabled = true
 req.id = "5"
 
-[unistream]
+[src.unistream]
 rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
 enabled = true
 # card
@@ -113,18 +123,18 @@ commission_rate_from_bank = 0.9
 commission_rate_from_any_card = 2.5
 req.id = "5"
 
-[vtb_am]
+[src.vtb_am]
 rates_url = "https://vtb.am/ru/currency"
 enabled = true
 
-[idpay]
+[src.idpay]
 rates_url = "https://www.idbanking.am/api/MyInfo/getCurrencyRateMobile"
 enabled = true
 commission_rate = 0.9
 # idpay > ru_card
 commission_rate_to_ru_card = 0.3
 
-[alfa_by]
+[src.alfa_by]
 rates_url = "https://www.alfabank.by/exchange/digital"
 enabled = true
 commission_rate = 1.0

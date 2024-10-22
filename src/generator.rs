@@ -1,5 +1,5 @@
 use crate::{
-    sources::{Currency, Rate, RateType, Source},
+    source::{Currency, Rate, RateType, Source},
     DUNNO,
 };
 use rust_decimal::{Decimal, RoundingStrategy};
@@ -291,23 +291,17 @@ pub fn generate_src_table(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collector::{collect_all, filter_collection, parse_acba};
-    use crate::sources::{acba, Config};
-    use reqwest::Client;
-    use std::time::Duration;
+    use crate::source::{acba, collect_all, filter_collection};
+    use std::{sync::LazyLock, time::Duration};
     use strum::IntoEnumIterator;
 
-    const TIMEOUT: u64 = 10;
+    static CFG: LazyLock<crate::Config> =
+        LazyLock::new(|| toml::from_str(include_str!("../config/config.toml")).unwrap());
 
-    fn build_client() -> reqwest::Result<Client> {
+    fn build_client(cfg: &crate::Config) -> reqwest::Result<reqwest::Client> {
         reqwest::ClientBuilder::new()
-            .timeout(Duration::from_secs(TIMEOUT))
+            .timeout(Duration::from_secs(cfg.bot.reqwest_timeout))
             .build()
-    }
-
-    fn load_src_config() -> anyhow::Result<Config> {
-        let cfg = toml::from_str(include_str!("../config/src.toml"))?;
-        Ok(cfg)
     }
 
     const ACBA_DATA: &str = r#"{
@@ -514,8 +508,8 @@ mod tests {
 
     #[test]
     fn test_graph() -> anyhow::Result<()> {
-        let acba: acba::Response = serde_json::from_str(ACBA_DATA)?;
-        let rates = parse_acba(acba)?;
+        let resp: acba::Response = serde_json::from_str(ACBA_DATA)?;
+        let rates = acba::parse(resp)?;
         let graph = build_graph(&rates, RateType::NoCash);
         let test_cases = get_test_cases();
         for (from, to) in test_cases {
@@ -526,9 +520,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_conv_table() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_src_config()?;
-        let results = collect_all(&client, &config).await;
+        let client = build_client(&CFG)?;
+        let results = collect_all(&client, &CFG.src).await;
         let rates = filter_collection(results);
         let test_cases = get_test_cases();
         for (from, to) in test_cases {
@@ -540,9 +533,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_src_table() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_src_config()?;
-        let results = collect_all(&client, &config).await;
+        let client = build_client(&CFG)?;
+        let results = collect_all(&client, &CFG.src).await;
         let rates = filter_collection(results);
         for src in Source::iter() {
             let _ = generate_src_table(src, &rates, RateType::NoCash);

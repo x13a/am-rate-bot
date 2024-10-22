@@ -1,5 +1,5 @@
-pub use crate::sources::RatesConfig as Config;
-use crate::sources::{de, Currency, RatesConfigTrait};
+pub use crate::source::BaseConfig as Config;
+use crate::source::{de, BaseConfigTrait, Currency, Rate, RateType};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -74,9 +74,9 @@ pub mod request {
     }
 }
 
-pub async fn get<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Response>
+pub async fn post<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Response>
 where
-    T: RatesConfigTrait,
+    T: BaseConfigTrait,
 {
     let req_data = request::Request {
         xmlns_xsi: "http://www.w3.org/2001/XMLSchema-instance".into(),
@@ -101,4 +101,27 @@ where
         .await?;
     let resp = quick_xml::de::from_str(&xml)?;
     Ok(resp)
+}
+
+pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Result<Vec<Rate>> {
+    let resp = post(client, config).await?;
+    let rates = resp
+        .soap_body
+        .exchange_rates_latest_response
+        .exchange_rates_latest_result
+        .rates
+        .exchange_rate
+        .iter()
+        .map(|v| {
+            let rate = Some(v.rate / v.amount);
+            Rate {
+                from: v.iso.clone(),
+                to: Currency::default(),
+                rate_type: RateType::Cb,
+                buy: rate,
+                sell: rate,
+            }
+        })
+        .collect();
+    Ok(rates)
 }

@@ -1,3 +1,4 @@
+use crate::source::{Currency, Rate, RateType};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -27,7 +28,7 @@ pub struct Config {
     pub req: Request,
 }
 
-pub async fn get(client: &reqwest::Client, config: &Config) -> anyhow::Result<Response> {
+async fn post(client: &reqwest::Client, config: &Config) -> anyhow::Result<Response> {
     let req_data = Request {
         country_code_from: config.req.country_code_from.clone(),
         country_id_from: config.req.country_id_from,
@@ -55,4 +56,15 @@ pub async fn get(client: &reqwest::Client, config: &Config) -> anyhow::Result<Re
     }
     let resp = serde_json::from_str(&resp.trim())?;
     Ok(resp)
+}
+
+pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Result<Vec<Rate>> {
+    let resp: Response = post(client, config).await?;
+    Ok(vec![Rate {
+        from: Currency::rub(),
+        to: Currency::default(),
+        rate_type: RateType::NoCash,
+        buy: Some(resp.convert_rate),
+        sell: None,
+    }])
 }

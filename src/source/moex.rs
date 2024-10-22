@@ -1,5 +1,7 @@
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use crate::source::{Currency as ModCurrency, Rate, RateType};
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_repr::Serialize_repr;
 use std::env;
 
@@ -86,7 +88,7 @@ pub async fn get_order_book(
         instrument_id: config.req.instrument_id.clone(),
         depth: config.req.depth,
     };
-    _get(client, &config.base_url, &config.path_order_book, &req_data).await
+    post(client, &config.base_url, &config.path_order_book, &req_data).await
 }
 
 pub async fn get_currency(
@@ -98,10 +100,10 @@ pub async fn get_currency(
         class_code: "CETS".into(),
         id: config.req.instrument_id.clone(),
     };
-    _get(client, &config.base_url, &config.path_currency, &req_data).await
+    post(client, &config.base_url, &config.path_currency, &req_data).await
 }
 
-async fn _get<T1, T2>(
+async fn post<T1, T2>(
     client: &reqwest::Client,
     base_url: &String,
     url_path: &String,
@@ -121,4 +123,39 @@ where
         .json()
         .await?;
     Ok(resp)
+}
+
+pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Result<Vec<Rate>> {
+    let currency: CurrencyResponse = get_currency(client, config).await?;
+    let order_book: GetOrderBookResponse = get_order_book(client, config).await?;
+    let to_decimal = |units: String, nano: i32| format!("{}.{}", units, nano).parse::<Decimal>();
+    let mut rate_buy = None;
+    let mut rate_sell = None;
+    let nominal = to_decimal(
+        currency.instrument.nominal.units,
+        currency.instrument.nominal.nano,
+    )?;
+    if let Some(bid) = order_book.bids.first() {
+        let sell = to_decimal(bid.price.units.clone(), bid.price.nano)?;
+        if sell > dec!(0.0) {
+            rate_sell = Some(nominal / sell);
+        }
+    }
+    if let Some(ask) = order_book.asks.first() {
+        let buy = to_decimal(ask.price.units.clone(), ask.price.nano)?;
+        if buy > dec!(0.0) {
+            rate_buy = Some(nominal / buy);
+        }
+    }
+    let mut rates = vec![];
+    if rate_buy.is_some() || rate_sell.is_some() {
+        rates.push(Rate {
+            from: ModCurrency::rub(),
+            to: ModCurrency::default(),
+            rate_type: RateType::NoCash,
+            buy: rate_buy,
+            sell: rate_sell,
+        });
+    }
+    Ok(rates)
 }

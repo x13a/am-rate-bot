@@ -1,7 +1,10 @@
-use anyhow::bail;
+use anyhow::ensure;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use serde::{de::DeserializeOwned, Deserialize};
-use std::fmt::Debug;
+use std::{collections::HashMap, env, fmt::Debug};
+use strum::{EnumCount, IntoEnumIterator};
+use tokio::sync::mpsc;
 
 pub mod acba;
 pub mod aeb;
@@ -32,22 +35,25 @@ pub mod unibank;
 pub mod unistream;
 pub mod vtb_am;
 
+const USER_AGENT: &str = "okhttp/4.12.0";
+
 #[derive(Debug)]
-pub struct Response {
+pub struct BaseResponse {
     pub rates: Vec<Rate>,
 }
 
-pub trait RatesConfigTrait {
+pub trait BaseConfigTrait {
     fn rates_url(&self) -> String;
 }
 
 pub async fn get_json<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
 where
     T1: DeserializeOwned,
-    T2: RatesConfigTrait,
+    T2: BaseConfigTrait,
 {
     let resp = client
         .get(config.rates_url())
+        .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send()
         .await?
         .json::<T1>()
@@ -62,14 +68,15 @@ pub async fn get_json_for_rate_type<T1, T2>(
 ) -> anyhow::Result<T1>
 where
     T1: DeserializeOwned,
-    T2: RatesConfigTrait,
+    T2: BaseConfigTrait,
 {
-    match rate_type {
-        RateType::NoCash | RateType::Cash => {}
-        _ => bail!(Error::InvalidRateType),
-    };
+    ensure!(
+        [RateType::NoCash, RateType::Cash].contains(&rate_type),
+        Error::InvalidRateType
+    );
     let resp = client
         .get(format!("{}{}", config.rates_url(), rate_type as u8))
+        .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send()
         .await?
         .json::<T1>()
@@ -141,18 +148,22 @@ impl Config {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct RatesConfig {
+pub struct BaseConfig {
     pub rates_url: String,
     pub enabled: bool,
 }
 
-impl RatesConfigTrait for RatesConfig {
+impl BaseConfigTrait for BaseConfig {
     fn rates_url(&self) -> String {
         self.rates_url.clone()
     }
 }
 
-pub mod de {
+fn percent(value: Decimal, from: Decimal) -> Decimal {
+    value / dec!(100.0) * from
+}
+
+mod de {
     use super::{Currency, RateType};
     use rust_decimal::Decimal;
     use serde::{de, Deserialize, Deserializer};
@@ -326,6 +337,8 @@ pub enum Error {
     InvalidRateType,
     #[error("html parse error")]
     Html,
+    #[error("no rates found")]
+    NoRates,
 }
 
 #[derive(Debug, Clone)]
@@ -337,258 +350,294 @@ pub struct Rate {
     pub sell: Option<Decimal>,
 }
 
+pub async fn collect_all(
+    client: &reqwest::Client,
+    config: &Config,
+) -> HashMap<Source, anyhow::Result<Vec<Rate>>> {
+    let mut results = HashMap::new();
+    let (tx, mut rx) = mpsc::channel(Source::COUNT);
+    for src in Source::iter().filter(|v| config.is_enabled_for(*v)) {
+        if src == Source::MoEx {
+            if env::var(moex::ENV_TINKOFF_TOKEN)
+                .unwrap_or_default()
+                .is_empty()
+            {
+                continue;
+            }
+        }
+        let client = client.clone();
+        let config = config.clone();
+        let tx = tx.clone();
+        tokio::spawn(async move {
+            let result = collect(&client, &config, src).await;
+            tx.send((src, result)).await.unwrap();
+        });
+    }
+    drop(tx);
+    while let Some(result) = rx.recv().await {
+        results.insert(result.0, result.1);
+    }
+    results
+}
+
+pub fn filter_collection(
+    results: HashMap<Source, anyhow::Result<Vec<Rate>>>,
+) -> HashMap<Source, Vec<Rate>> {
+    let mut rates = HashMap::new();
+    for (src, result) in results {
+        match result {
+            Ok(v) => {
+                if v.is_empty() {
+                    continue;
+                }
+                let v = v
+                    .iter()
+                    .filter(|v| {
+                        (!v.from.is_empty() && !v.to.is_empty())
+                            && (v.buy.is_some_and(|v| v > dec!(0.0))
+                                || v.sell.is_some_and(|v| v > dec!(0.0)))
+                    })
+                    .cloned()
+                    .collect::<Vec<_>>();
+                rates.insert(src, v);
+            }
+            Err(err) => log::error!("failed to get rate: {err}, src: {src}"),
+        }
+    }
+    rates
+}
+
+pub async fn collect(
+    client: &reqwest::Client,
+    config: &Config,
+    src: Source,
+) -> anyhow::Result<Vec<Rate>> {
+    let rates = match src {
+        Source::Acba => acba::collect(client, &config.acba).await?,
+        Source::Ameria => ameria::collect(client, &config.ameria).await?,
+        Source::Ardshin => ardshin::collect(client, &config.ardshin).await?,
+        Source::ArmSwiss => arm_swiss::collect(client, &config.arm_swiss).await?,
+        Source::CbAm => cb_am::collect(client, &config.cb_am).await?,
+        Source::Evoca => evoca::collect(client, &config.evoca).await?,
+        Source::Fast => fast::collect(client, &config.fast).await?,
+        Source::Ineco => ineco::collect(client, &config.ineco).await?,
+        Source::Mellat => mellat::collect(client, &config.mellat).await?,
+        Source::Converse => converse::collect(client, &config.converse).await?,
+        Source::AEB => aeb::collect(client, &config.aeb).await?,
+        Source::VtbAm => vtb_am::collect(client, &config.vtb_am).await?,
+        Source::Artsakh => artsakh::collect(client, &config.artsakh).await?,
+        Source::Unibank => unibank::collect(client, &config.unibank).await?,
+        Source::Amio => amio::collect(client, &config.amio).await?,
+        Source::Byblos => byblos::collect(client, &config.byblos).await?,
+        Source::IdBank => idbank::collect(client, &config.idbank).await?,
+        Source::MoEx => moex::collect(client, &config.moex).await?,
+        Source::Ararat => ararat::collect(client, &config.ararat).await?,
+        Source::IdPay => idpay::collect(client, &config.idpay).await?,
+        Source::Mir => mir::collect(client, &config.mir).await?,
+        Source::SAS => sas::collect(client, &config.sas).await?,
+        Source::HSBC => hsbc::collect(client, &config.hsbc).await?,
+        Source::Avosend => avosend::collect(client, &config.avosend).await?,
+        Source::Unistream => unistream::collect(client, &config.unistream).await?,
+        Source::AlfaBy => alfa_by::collect(client, &config.alfa_by).await?,
+    };
+    Ok(rates)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reqwest::Client;
-    use std::time::Duration;
+    use std::{sync::LazyLock, time::Duration};
 
-    const TIMEOUT: u64 = 10;
+    static CFG: LazyLock<crate::Config> =
+        LazyLock::new(|| toml::from_str(include_str!("../../config/config.toml")).unwrap());
 
-    fn build_client() -> reqwest::Result<Client> {
+    fn build_client(cfg: &crate::Config) -> reqwest::Result<reqwest::Client> {
         reqwest::ClientBuilder::new()
-            .timeout(Duration::from_secs(TIMEOUT))
+            .timeout(Duration::from_secs(cfg.bot.reqwest_timeout))
             .build()
-    }
-
-    fn load_config() -> anyhow::Result<Config> {
-        let cfg = toml::from_str(include_str!("../../config/src.toml"))?;
-        Ok(cfg)
     }
 
     #[tokio::test]
     async fn test_acba() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: acba::Response = get_json(&client, &config.acba).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Acba).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_ameria() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: ameria::Response =
-            get_json_for_rate_type(&client, &config.ameria, RateType::NoCash).await?;
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        let _: ameria::Response =
-            get_json_for_rate_type(&client, &config.ameria, RateType::Cash).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Ameria).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_ardshin() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: ardshin::Response = get_json(&client, &config.ardshin).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Ardshin).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_evoca() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: evoca::Response =
-            get_json_for_rate_type(&client, &config.evoca, RateType::NoCash).await?;
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        let _: evoca::Response =
-            get_json_for_rate_type(&client, &config.evoca, RateType::Cash).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Evoca).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_fast() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: fast::Response =
-            get_json_for_rate_type(&client, &config.fast, RateType::NoCash).await?;
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        let _: fast::Response =
-            get_json_for_rate_type(&client, &config.fast, RateType::Cash).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Fast).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_ineco() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: ineco::Response = get_json(&client, &config.ineco).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Ineco).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_mellat() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: mellat::Response = get_json(&client, &config.mellat).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Mellat).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_arm_swiss() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: arm_swiss::Response = get_json(&client, &config.arm_swiss).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::ArmSwiss).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_cb_am() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: cb_am::Response = cb_am::get(&client, &config.cb_am).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::CbAm).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_converse() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: converse::Response = get_json(&client, &config.converse).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Converse).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_aeb() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: aeb::Response = get_json(&client, &config.aeb).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::AEB).await?;
         Ok(())
     }
 
-    #[ignore]
     #[tokio::test]
     async fn test_vtb_am() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: vtb_am::Response = vtb_am::get(&client, &config.vtb_am).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::VtbAm).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_artsakh() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: artsakh::Response = artsakh::get(&client, &config.artsakh).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Artsakh).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_unibank() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: unibank::Response = unibank::get(&client, &config.unibank).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Unibank).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_amio() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: amio::Response =
-            get_json_for_rate_type(&client, &config.amio, RateType::NoCash).await?;
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        let _: amio::Response =
-            get_json_for_rate_type(&client, &config.amio, RateType::Cash).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Amio).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_byblos() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: byblos::Response =
-            get_json_for_rate_type(&client, &config.byblos, RateType::NoCash).await?;
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        let _: byblos::Response =
-            get_json_for_rate_type(&client, &config.byblos, RateType::Cash).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Byblos).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_idbank() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: idbank::Response = idbank::get(&client, &config.idbank).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::IdBank).await?;
         Ok(())
     }
 
-    #[ignore]
-    #[tokio::test]
+    #[allow(dead_code)]
+    #[cfg_attr(feature = "moex", tokio::test)]
     async fn test_moex() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: moex::CurrencyResponse = moex::get_currency(&client, &config.moex).await?;
-        let _: moex::GetOrderBookResponse = moex::get_order_book(&client, &config.moex).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::MoEx).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_ararat() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: ararat::Response =
-            get_json_for_rate_type(&client, &config.ararat, RateType::NoCash).await?;
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        let _: ararat::Response =
-            get_json_for_rate_type(&client, &config.ararat, RateType::Cash).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Ararat).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_idpay() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: idpay::Response = idpay::get(&client, &config.idpay).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::IdPay).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_mir() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: mir::Response = get_json(&client, &config.mir).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Mir).await?;
         Ok(())
     }
 
-    #[ignore]
     #[tokio::test]
+    #[cfg_attr(feature = "github", ignore)]
     async fn test_sas() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: sas::Response = sas::get(&client, &config.sas).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::SAS).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_hsbc() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: hsbc::Response = hsbc::get(&client, &config.hsbc).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::HSBC).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_avosend() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: avosend::Response = avosend::get(&client, &config.avosend).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Avosend).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_unistream() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: unistream::Response = unistream::get(&client, &config.unistream).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Unistream).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_alfa_by() -> anyhow::Result<()> {
-        let client = build_client()?;
-        let config = load_config()?;
-        let _: alfa_by::Response = alfa_by::get(&client, &config.alfa_by).await?;
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::AlfaBy).await?;
         Ok(())
     }
 }

@@ -1,7 +1,6 @@
-use crate::sources::{de, Currency, RatesConfigTrait};
+use crate::source::{de, BaseConfigTrait, Currency, Rate, RateType, USER_AGENT};
 use rust_decimal::Decimal;
-use serde::de::DeserializeOwned;
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize};
 
 #[derive(Debug, Deserialize)]
 pub struct Response {
@@ -73,7 +72,7 @@ pub struct Config {
     pub req: request::Request,
 }
 
-impl RatesConfigTrait for Config {
+impl BaseConfigTrait for Config {
     fn rates_url(&self) -> String {
         self.rates_url.clone()
     }
@@ -89,10 +88,10 @@ impl LSoftRequest for Config {
     }
 }
 
-pub async fn get<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
+async fn post<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
 where
     T1: DeserializeOwned,
-    T2: RatesConfigTrait + LSoftRequest,
+    T2: BaseConfigTrait + LSoftRequest,
 {
     let req = config.req();
     let req_data = request::Request {
@@ -109,10 +108,38 @@ where
     let body = client
         .post(config.rates_url())
         .body(quick_xml::se::to_string(&req_data)?)
+        .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send()
         .await?
         .text()
         .await?;
     let resp: T1 = quick_xml::de::from_str(&body)?;
     Ok(resp)
+}
+
+pub async fn collect<T1>(client: &reqwest::Client, config: &T1) -> anyhow::Result<Vec<Rate>>
+where
+    T1: BaseConfigTrait + LSoftRequest,
+{
+    let resp: Response = post(client, config).await?;
+    let mut rates = vec![];
+    let to = Currency::default();
+    for item in resp.get_currency_list.currency_list {
+        let from = item.external_id;
+        rates.push(Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::NoCash,
+            buy: item.buy,
+            sell: item.sell,
+        });
+        rates.push(Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::Cash,
+            buy: item.csh_buy,
+            sell: item.csh_sell,
+        });
+    }
+    Ok(rates)
 }

@@ -1,5 +1,5 @@
-use crate::sources::{Currency, Error, Rate, RateType, RatesConfigTrait};
-pub use crate::sources::{RatesConfig as Config, Response};
+pub use crate::source::{BaseConfig as Config, BaseResponse as Response};
+use crate::source::{BaseConfigTrait, Currency, Error, Rate, RateType};
 use select::{
     document::Document,
     predicate::{Class, Name},
@@ -7,7 +7,7 @@ use select::{
 
 pub async fn get<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Response>
 where
-    T: RatesConfigTrait,
+    T: BaseConfigTrait,
 {
     let html = client.get(config.rates_url()).send().await?.text().await?;
     let document = Document::from(html.as_str());
@@ -58,4 +58,12 @@ where
         }
     }
     Ok(Response { rates })
+}
+
+pub async fn collect<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Vec<Rate>>
+where
+    T: BaseConfigTrait,
+{
+    let resp: Response = get(client, config).await?;
+    Ok(resp.rates)
 }

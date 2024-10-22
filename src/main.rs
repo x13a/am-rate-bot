@@ -1,55 +1,43 @@
-use am_rate_bot::{bot, collector, sources::Config, Opts};
-use std::{env, fs, sync::Arc, time::Duration};
-
-const ENV_SRC_CONFIG: &str = "SRC_CONFIG";
-const ENV_REQWEST_TIMEOUT: &str = "REQWEST_TIMEOUT";
-const ENV_UPDATE_INTERVAL: &str = "UPDATE_INTERVAL";
+use am_rate_bot::{
+    bot,
+    source::{collect_all, filter_collection},
+    Config,
+};
+use std::{sync::Arc, time::Duration};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    let opts = get_opts()?;
+    let cfg = Config::load()?;
     let db = bot::Storage::new();
     let task1 = async {
         let db = db.clone();
-        collect(db, opts).await.expect("panic");
+        let cfg = cfg.clone();
+        collect(db, cfg).await.expect("panic");
     };
     let task2 = async {
         let db = db.clone();
-        bot::run(db, opts).await.expect("panic");
+        let cfg = cfg.clone();
+        bot::run(db, cfg).await.expect("panic");
     };
     tokio::join!(task1, task2);
     Ok(())
 }
 
-fn get_opts() -> anyhow::Result<Opts> {
-    let opts = Opts {
-        reqwest_timeout: env::var(ENV_REQWEST_TIMEOUT)?.parse()?,
-        update_interval: env::var(ENV_UPDATE_INTERVAL)?.parse()?,
-    };
-    Ok(opts)
-}
-
-fn load_src_config() -> anyhow::Result<Config> {
-    let cfg = toml::from_str(fs::read_to_string(env::var(ENV_SRC_CONFIG)?)?.as_str())?;
-    Ok(cfg)
-}
-
-async fn collect(db: Arc<bot::Storage>, opts: Opts) -> anyhow::Result<()> {
+async fn collect(db: Arc<bot::Storage>, cfg: Arc<Config>) -> anyhow::Result<()> {
     let client = reqwest::ClientBuilder::new()
-        .timeout(Duration::from_secs(opts.reqwest_timeout))
+        .timeout(Duration::from_secs(cfg.bot.reqwest_timeout))
         .build()?;
-    let cfg = load_src_config()?;
     let get_rates = || async {
         log::debug!("get rates");
-        let results = collector::collect_all(&client, &cfg).await;
-        let rates = collector::filter_collection(results);
+        let results = collect_all(&client, &cfg.src).await;
+        let rates = filter_collection(results);
         db.clear_cache().await;
         db.set_rates(&rates).await;
     };
     loop {
         get_rates().await;
-        let sleep = tokio::time::sleep(Duration::from_secs(opts.update_interval));
+        let sleep = tokio::time::sleep(Duration::from_secs(cfg.bot.update_interval));
         tokio::pin!(sleep);
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {

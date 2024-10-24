@@ -132,7 +132,7 @@ pub fn generate_conv_table(
             paths.iter_mut().for_each(|v| v.1 = dec!(1.0) / v.1);
         }
         paths.sort_by(|a, b| sort(a.1, b.1));
-        if src.is_bank() {
+        if src.is_remove_extra_conv() {
             let max_len = paths.iter().map(|v| v.0.len()).max().unwrap_or(3);
             for i in 2..max_len + 1 {
                 let pos = paths.iter().position(|v| v.0.len() == i);
@@ -166,15 +166,7 @@ pub fn generate_conv_table(
     });
     let best_rate = table
         .iter()
-        .filter(|r| {
-            #[allow(unused_mut)]
-            let mut res = r.src.is_bank();
-            #[cfg(feature = "alfa_by")]
-            {
-                res = res && r.src != Source::AlfaBy;
-            }
-            res
-        })
+        .filter(|r| r.src.is_local_bank())
         .map(|r| r.rate)
         .next()
         .unwrap_or_default();
@@ -250,7 +242,7 @@ pub fn generate_src_table(
     }
 
     let mut rate_type = rate_type;
-    if src == Source::CbAm {
+    if src == Source::Cb {
         rate_type = RateType::Cb;
     }
     let mut table = vec![];

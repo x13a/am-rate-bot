@@ -60,7 +60,7 @@ req.direction = "from"
 rates_url = "https://online.byblosbankarmenia.am/InternetBank/api/exchangeRates/"
 enabled = true
 
-[src.cb_am]
+[src.cb]
 rates_url = "https://api.cba.am/exchangerates.asmx"
 enabled = true
 

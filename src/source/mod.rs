@@ -21,7 +21,7 @@ pub mod armsoft;
 pub mod artsakh;
 pub mod avosend;
 pub mod byblos;
-pub mod cb_am;
+pub mod cb;
 pub mod converse;
 pub mod evoca;
 pub mod fast;
@@ -100,7 +100,7 @@ pub struct Config {
     pub artsakh: artsakh::Config,
     pub avosend: avosend::Config,
     pub byblos: byblos::Config,
-    pub cb_am: cb_am::Config,
+    pub cb: cb::Config,
     pub converse: converse::Config,
     pub evoca: evoca::Config,
     pub fast: fast::Config,
@@ -133,7 +133,7 @@ impl Config {
             Source::Artsakh => self.artsakh.enabled,
             Source::Avosend => self.avosend.enabled,
             Source::Byblos => self.byblos.enabled,
-            Source::CbAm => self.cb_am.enabled,
+            Source::Cb => self.cb.enabled,
             Source::Converse => self.converse.enabled,
             Source::Evoca => self.evoca.enabled,
             Source::Fast => self.fast.enabled,
@@ -232,7 +232,7 @@ mod de {
 )]
 #[strum(ascii_case_insensitive)]
 pub enum Source {
-    CbAm,
+    Cb,
     #[cfg(feature = "moex")]
     MoEx,
     Acba,
@@ -264,24 +264,18 @@ pub enum Source {
 
 impl Source {
     pub fn prefix(&self) -> &str {
-        if [
-            Self::CbAm,
-            #[cfg(feature = "alfa_by")]
-            Self::AlfaBy,
-        ]
-        .contains(self)
-        {
+        if *self == Self::Cb {
             "@"
-        } else if self.is_bank() {
+        } else if self.is_local_bank() {
             "*"
         } else {
             "#"
         }
     }
 
-    pub fn is_bank(&self) -> bool {
+    pub fn is_local_bank(&self) -> bool {
         ![
-            Self::CbAm,
+            Self::Cb,
             #[cfg(feature = "moex")]
             Self::MoEx,
             Self::IdPay,
@@ -289,8 +283,19 @@ impl Source {
             Self::SAS,
             Self::Avosend,
             Self::Unistream,
+            #[cfg(feature = "alfa_by")]
+            Self::AlfaBy,
         ]
         .contains(self)
+    }
+
+    pub fn is_remove_extra_conv(&self) -> bool {
+        let mut v = self.is_local_bank();
+        #[cfg(feature = "alfa_by")]
+        {
+            v = v || *self == Self::AlfaBy;
+        }
+        v
     }
 }
 
@@ -435,7 +440,7 @@ pub async fn collect(
         Source::Ameria => ameria::collect(client, &config.ameria).await?,
         Source::Ardshin => ardshin::collect(client, &config.ardshin).await?,
         Source::ArmSwiss => arm_swiss::collect(client, &config.arm_swiss).await?,
-        Source::CbAm => cb_am::collect(client, &config.cb_am).await?,
+        Source::Cb => cb::collect(client, &config.cb).await?,
         Source::Evoca => evoca::collect(client, &config.evoca).await?,
         Source::Fast => fast::collect(client, &config.fast).await?,
         Source::Ineco => ineco::collect(client, &config.ineco).await?,
@@ -534,9 +539,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_cb_am() -> anyhow::Result<()> {
+    async fn test_cb() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
-        let _ = collect(&client, &CFG.src, Source::CbAm).await?;
+        let _ = collect(&client, &CFG.src, Source::Cb).await?;
         Ok(())
     }
 

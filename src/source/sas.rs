@@ -6,7 +6,13 @@ async fn get<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Response
 where
     T: BaseConfigTrait,
 {
-    let html = client.get(config.rates_url()).send().await?.text().await?;
+    let html = client
+        .get(config.rates_url())
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
     let document = Document::from(html.as_str());
     let exchange_table = document
         .find(Class("exchange-table"))

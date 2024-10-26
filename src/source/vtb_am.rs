@@ -9,7 +9,13 @@ pub async fn get<T>(client: &reqwest::Client, config: &T) -> anyhow::Result<Resp
 where
     T: BaseConfigTrait,
 {
-    let html = client.get(config.rates_url()).send().await?.text().await?;
+    let html = client
+        .get(config.rates_url())
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
     let document = Document::from(html.as_str());
     let mut rates = vec![];
     for (idx, exchange_table) in document.find(Class("exchange-rate-table")).enumerate() {

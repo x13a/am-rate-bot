@@ -111,6 +111,7 @@ where
         .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send()
         .await?
+        .error_for_status()?
         .text()
         .await?;
     let resp: T1 = quick_xml::de::from_str(&body)?;

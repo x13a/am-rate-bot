@@ -120,6 +120,7 @@ where
         .header(reqwest::header::AUTHORIZATION, format!("Bearer {token}"))
         .send()
         .await?
+        .error_for_status()?
         .json()
         .await?;
     Ok(resp)

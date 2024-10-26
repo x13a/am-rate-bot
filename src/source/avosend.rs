@@ -48,6 +48,7 @@ async fn post(client: &reqwest::Client, config: &Config) -> anyhow::Result<Respo
         )
         .send()
         .await?
+        .error_for_status()?
         .text()
         .await?;
     const CLOSE_SCRIPT_TAG: &str = "</script>";

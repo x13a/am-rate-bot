@@ -128,6 +128,9 @@ pub fn generate_conv_table(
     for (src, rates) in rates {
         let graph = build_graph(&rates, rate_type);
         let mut paths = find_all_paths(&graph, from.clone(), to.clone());
+        if paths.is_empty() {
+            continue;
+        }
         if inv {
             paths.iter_mut().for_each(|v| v.1 = dec!(1.0) / v.1);
         }

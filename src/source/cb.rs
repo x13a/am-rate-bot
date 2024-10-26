@@ -97,6 +97,7 @@ where
         .body(quick_xml::se::to_string(&req_data)?)
         .send()
         .await?
+        .error_for_status()?
         .text()
         .await?;
     let resp = quick_xml::de::from_str(&xml)?;

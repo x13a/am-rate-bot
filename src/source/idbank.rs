@@ -46,6 +46,7 @@ where
         .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send()
         .await?
+        .error_for_status()?
         .json()
         .await?;
     Ok(resp)

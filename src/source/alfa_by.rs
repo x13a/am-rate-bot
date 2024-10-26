@@ -58,6 +58,7 @@ async fn get(client: &reqwest::Client, config: &Config) -> anyhow::Result<Respon
         .get(config.rates_url.clone())
         .send()
         .await?
+        .error_for_status()?
         .text()
         .await?;
     let document = Document::from(html.as_str());

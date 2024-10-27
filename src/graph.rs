@@ -16,7 +16,7 @@ pub fn build(rates: &[Rate], rate_type: RateType) -> HashMap<Currency, Vec<Edge>
     };
     for rate in rates
         .iter()
-        .filter(|r| [rate_type, RateType::Cb].contains(&r.rate_type) && r.from != r.to)
+        .filter(|r| [rate_type, RateType::Cb].contains(&r.rate_type))
     {
         if let Some(buy) = rate.buy {
             if buy > dec!(0.0) {

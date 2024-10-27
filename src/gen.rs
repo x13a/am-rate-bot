@@ -74,11 +74,7 @@ pub fn conv_table(
         }
     }
     table.sort_by(|a, b| match sort(a.rate, b.rate) {
-        std::cmp::Ordering::Equal => {
-            let a_src = a.src.to_string();
-            let b_src = b.src.to_string();
-            a_src.cmp(&b_src)
-        }
+        std::cmp::Ordering::Equal => a.src.cmp(&b.src),
         other => other,
     });
     let best_rate = table
@@ -116,7 +112,7 @@ pub fn conv_table(
             &mut s,
             "{} {:<src_width$} | {:<rate_width$} | {:>diff_width$} | {}",
             row.src.prefix(),
-            row.src.to_string(),
+            row.src,
             row.rate_str,
             row.diff_str,
             row.path
@@ -165,11 +161,11 @@ pub fn src_table(src: Source, rates: &HashMap<Source, Vec<Rate>>, rate_type: Rat
     for rate in rates.iter().filter(|v| v.rate_type == rate_type) {
         let buy_str = match rate.buy {
             Some(buy) => decimal_to_string(buy, RATE_DP),
-            _ => NO_RATE.to_string(),
+            _ => NO_RATE.into(),
         };
         let sell_str = match rate.sell {
             Some(sell) => decimal_to_string(sell, RATE_DP),
-            _ => NO_RATE.to_string(),
+            _ => NO_RATE.into(),
         };
         let row = Row {
             buy_str,

@@ -48,11 +48,11 @@ impl Cache {
         from: Currency,
         to: Currency,
         rate_type: RateType,
-        is_inv: bool,
+        inv: bool,
         value: String,
     ) {
         self.conv
-            .insert(self.format_conv_key(from, to, rate_type, is_inv), value);
+            .insert(self.format_conv_key(from, to, rate_type, inv), value);
     }
 
     fn add_src(&mut self, src: Source, rate_type: RateType, value: String) {
@@ -72,10 +72,10 @@ impl Cache {
         from: Currency,
         to: Currency,
         rate_type: RateType,
-        is_inv: bool,
+        inv: bool,
     ) -> Option<String> {
         self.conv
-            .get(&self.format_conv_key(from, to, rate_type, is_inv))
+            .get(&self.format_conv_key(from, to, rate_type, inv))
             .cloned()
     }
 
@@ -88,13 +88,13 @@ impl Cache {
         from: Currency,
         to: Currency,
         rate_type: RateType,
-        is_inv: bool,
+        inv: bool,
     ) -> String {
         [
             from.to_string().to_lowercase(),
             to.to_string().to_uppercase(),
             (rate_type as u8).to_string(),
-            (is_inv as i32).to_string(),
+            (inv as i32).to_string(),
         ]
         .join(Self::KEY_SEP)
     }
@@ -140,10 +140,10 @@ impl Db {
         from: Currency,
         to: Currency,
         rate_type: RateType,
-        is_inv: bool,
+        inv: bool,
     ) -> Option<String> {
         let cache = self.cache.lock().await;
-        cache.get_conv(from, to, rate_type, is_inv)
+        cache.get_conv(from, to, rate_type, inv)
     }
 
     pub async fn set_cache_src(&self, src: Source, rate_type: RateType, value: String) {
@@ -156,11 +156,11 @@ impl Db {
         from: Currency,
         to: Currency,
         rate_type: RateType,
-        is_inv: bool,
+        inv: bool,
         value: String,
     ) {
         let mut cache = self.cache.lock().await;
-        cache.add_conv(from, to, rate_type, is_inv, value);
+        cache.add_conv(from, to, rate_type, inv, value);
     }
 
     pub async fn get_updated_at(&self) -> SystemTime {

@@ -33,8 +33,8 @@ async fn collect(db: Arc<Db>, cfg: Arc<Config>) -> anyhow::Result<()> {
         log::debug!("get rates");
         let results = collect_all(&client, &cfg.src).await;
         let rates = filter_collection(results);
-        db.clear_cache().await;
         db.set_rates(&rates).await;
+        db.clear_cache().await;
     };
     loop {
         get_rates().await;

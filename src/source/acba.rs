@@ -63,8 +63,7 @@ pub(crate) fn parse(resp: Response) -> anyhow::Result<Vec<ModRate>> {
         results.extend_from_slice(&rates);
     }
     for rate in resp.result.rates.cross {
-        let currency = rate.currency.to_string();
-        let Some((from, to)) = currency.split_once('/') else {
+        let Some((from, to)) = rate.currency.split_once('/') else {
             continue;
         };
         results.push(ModRate {

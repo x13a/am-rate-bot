@@ -39,7 +39,7 @@ dependencies = [
 
 [[package]]
 name = "am-rate-bot"
-version = "0.26.7"
+version = "0.26.8"
 dependencies = [
  "anyhow",
  "chrono",

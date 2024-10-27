@@ -123,7 +123,7 @@ commission_rate_from_bank = 0.9
 commission_rate_from_any_card = 2.5
 req.id = "5"
 
-[src.vtb_am]
+[src.vtb]
 rates_url = "https://vtb.am/ru/currency"
 enabled = true
 

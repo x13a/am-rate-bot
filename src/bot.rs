@@ -1,10 +1,11 @@
 use crate::{
-    generator::{generate_conv_table, generate_src_table},
-    source::{Currency, Rate, RateType, Source},
+    db::Db,
+    gen,
+    source::{Currency, RateType, Source},
     Config, DUNNO,
 };
 use chrono::{DateTime, Utc};
-use std::{collections::HashMap, env, str::FromStr, sync::Arc, time::SystemTime};
+use std::{env, str::FromStr, sync::Arc};
 use strum::IntoEnumIterator;
 use teloxide::{
     adaptors::{
@@ -20,177 +21,9 @@ use teloxide::{
         html,
     },
 };
-use tokio::sync::Mutex;
 
 type Bot = DefaultParseMode<Throttle<teloxide::Bot>>;
 const WELCOME_MSG: &str = "Meow!";
-
-#[derive(Debug)]
-pub struct Storage {
-    data: Mutex<Data>,
-    cache: Mutex<Cache>,
-}
-
-#[derive(Debug)]
-pub struct Data {
-    rates: HashMap<Source, Vec<Rate>>,
-    updated_at: SystemTime,
-}
-
-impl Data {
-    fn get_rates(&self) -> HashMap<Source, Vec<Rate>> {
-        self.rates.clone()
-    }
-
-    fn set_rates(&mut self, value: &HashMap<Source, Vec<Rate>>) {
-        self.rates.clone_from(value);
-        self.updated_at = SystemTime::now();
-    }
-
-    fn get_updated_at(&self) -> SystemTime {
-        self.updated_at
-    }
-}
-
-#[derive(Debug)]
-pub struct Cache {
-    conv: HashMap<String, String>,
-    src: HashMap<String, String>,
-}
-
-impl Cache {
-    const KEY_SEP: &'static str = "_";
-
-    fn clear(&mut self) {
-        self.conv.clear();
-        self.src.clear();
-    }
-
-    fn add_conv(
-        &mut self,
-        from: Currency,
-        to: Currency,
-        rate_type: RateType,
-        is_inv: bool,
-        value: String,
-    ) {
-        self.conv
-            .insert(self.format_conv_key(from, to, rate_type, is_inv), value);
-    }
-
-    fn add_src(&mut self, src: Source, rate_type: RateType, value: String) {
-        self.src.insert(self.format_src_key(src, rate_type), value);
-    }
-
-    fn format_src_key(&self, src: Source, rate_type: RateType) -> String {
-        [
-            src.to_string().to_lowercase(),
-            (rate_type as u8).to_string(),
-        ]
-        .join(Self::KEY_SEP)
-    }
-
-    fn get_conv(
-        &self,
-        from: Currency,
-        to: Currency,
-        rate_type: RateType,
-        is_inv: bool,
-    ) -> Option<String> {
-        self.conv
-            .get(&self.format_conv_key(from, to, rate_type, is_inv))
-            .cloned()
-    }
-
-    fn get_src(&self, src: Source, rate_type: RateType) -> Option<String> {
-        self.src.get(&self.format_src_key(src, rate_type)).cloned()
-    }
-
-    fn format_conv_key(
-        &self,
-        from: Currency,
-        to: Currency,
-        rate_type: RateType,
-        is_inv: bool,
-    ) -> String {
-        [
-            from.to_string().to_lowercase(),
-            to.to_string().to_uppercase(),
-            (rate_type as u8).to_string(),
-            (is_inv as i32).to_string(),
-        ]
-        .join(Self::KEY_SEP)
-    }
-}
-
-impl Storage {
-    #[must_use]
-    pub fn new() -> Arc<Self> {
-        Arc::new(Self {
-            data: Mutex::new(Data {
-                rates: HashMap::new(),
-                updated_at: SystemTime::now(),
-            }),
-            cache: Mutex::new(Cache {
-                conv: HashMap::new(),
-                src: HashMap::new(),
-            }),
-        })
-    }
-
-    pub async fn get_rates(&self) -> HashMap<Source, Vec<Rate>> {
-        let data = self.data.lock().await;
-        data.get_rates()
-    }
-
-    pub async fn set_rates(&self, value: &HashMap<Source, Vec<Rate>>) {
-        let mut data = self.data.lock().await;
-        data.set_rates(value);
-    }
-
-    pub async fn clear_cache(&self) {
-        let mut cache = self.cache.lock().await;
-        cache.clear();
-    }
-
-    pub async fn get_cache_src(&self, src: Source, rate_type: RateType) -> Option<String> {
-        let cache = self.cache.lock().await;
-        cache.get_src(src, rate_type)
-    }
-
-    pub async fn get_cache_conv(
-        &self,
-        from: Currency,
-        to: Currency,
-        rate_type: RateType,
-        is_inv: bool,
-    ) -> Option<String> {
-        let cache = self.cache.lock().await;
-        cache.get_conv(from, to, rate_type, is_inv)
-    }
-
-    pub async fn set_cache_src(&self, src: Source, rate_type: RateType, value: String) {
-        let mut cache = self.cache.lock().await;
-        cache.add_src(src, rate_type, value);
-    }
-
-    pub async fn set_cache_conv(
-        &self,
-        from: Currency,
-        to: Currency,
-        rate_type: RateType,
-        is_inv: bool,
-        value: String,
-    ) {
-        let mut cache = self.cache.lock().await;
-        cache.add_conv(from, to, rate_type, is_inv, value);
-    }
-
-    pub async fn get_updated_at(&self) -> SystemTime {
-        let data = self.data.lock().await;
-        data.get_updated_at()
-    }
-}
 
 #[derive(BotCommands, Clone)]
 #[command(
@@ -244,7 +77,7 @@ enum Command {
     Start(String),
 }
 
-pub async fn run(db: Arc<Storage>, cfg: Arc<Config>) -> anyhow::Result<()> {
+pub async fn run(db: Arc<Db>, cfg: Arc<Config>) -> anyhow::Result<()> {
     let bot = teloxide::Bot::from_env()
         .throttle(Limits::default())
         .parse_mode(ParseMode::Html);
@@ -289,7 +122,7 @@ async fn command(
     bot: Bot,
     msg: Message,
     cmd: Command,
-    db: Arc<Storage>,
+    db: Arc<Db>,
     cfg: Arc<Config>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     match cmd {
@@ -461,7 +294,7 @@ async fn start_repl(
     value: String,
     bot: Bot,
     msg: Message,
-    db: Arc<Storage>,
+    db: Arc<Db>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if value.is_empty() {
         bot.send_message(msg.chat.id, WELCOME_MSG).await?;
@@ -505,7 +338,7 @@ async fn ls_repl(bot: Bot, msg: Message) -> Result<(), Box<dyn std::error::Error
 async fn info_repl(
     bot: Bot,
     msg: Message,
-    db: Arc<Storage>,
+    db: Arc<Db>,
     cfg: Arc<Config>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -528,7 +361,7 @@ async fn src_repl(
     rate_type: RateType,
     bot: Bot,
     msg: Message,
-    db: Arc<Storage>,
+    db: Arc<Db>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cached = db.get_cache_src(src, rate_type).await;
     let s = match cached {
@@ -536,7 +369,7 @@ async fn src_repl(
         None => {
             log::debug!("empty cache src");
             let rates = db.get_rates().await;
-            let s = generate_src_table(src, &rates, rate_type);
+            let s = gen::src_table(src, &rates, rate_type);
             db.set_cache_src(src, rate_type, s.clone()).await;
             s
         }
@@ -552,7 +385,7 @@ async fn conv_repl(
     inv: bool,
     bot: Bot,
     msg: Message,
-    db: Arc<Storage>,
+    db: Arc<Db>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if from.is_empty() || to.is_empty() {
         return dunno_repl(bot, msg).await;
@@ -567,7 +400,7 @@ async fn conv_repl(
             Some(s) => s,
             None => {
                 log::debug!("empty cache conv");
-                let s = generate_conv_table(from.clone(), to.clone(), &rates, rate_type, is_inv);
+                let s = gen::conv_table(from.clone(), to.clone(), &rates, rate_type, is_inv);
                 db.set_cache_conv(from.clone(), to.clone(), rate_type, is_inv, s.clone())
                     .await;
                 s

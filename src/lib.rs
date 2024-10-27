@@ -2,7 +2,10 @@ use serde::Deserialize;
 use std::{env, fs, sync::Arc};
 
 pub mod bot;
-pub mod generator;
+pub mod collector;
+pub mod db;
+pub mod gen;
+pub mod graph;
 pub mod source;
 
 pub const DUNNO: &str = r"¯\_(ツ)_/¯";

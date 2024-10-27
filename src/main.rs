@@ -1,6 +1,7 @@
 use am_rate_bot::{
     bot,
-    source::{collect_all, filter_collection},
+    collector::{collect_all, filter_collection},
+    db::Db,
     Config,
 };
 use std::{sync::Arc, time::Duration};
@@ -9,7 +10,7 @@ use std::{sync::Arc, time::Duration};
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cfg = Config::load()?;
-    let db = bot::Storage::new();
+    let db = Db::new();
     let task1 = async {
         let db = db.clone();
         let cfg = cfg.clone();
@@ -24,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn collect(db: Arc<bot::Storage>, cfg: Arc<Config>) -> anyhow::Result<()> {
+async fn collect(db: Arc<Db>, cfg: Arc<Config>) -> anyhow::Result<()> {
     let client = reqwest::ClientBuilder::new()
         .timeout(Duration::from_secs(cfg.bot.reqwest_timeout))
         .build()?;

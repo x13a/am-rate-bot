@@ -2,11 +2,7 @@ use anyhow::ensure;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{de::DeserializeOwned, Deserialize};
-#[cfg(feature = "moex")]
-use std::env;
-use std::{collections::HashMap, fmt::Debug};
-use strum::{EnumCount, IntoEnumIterator};
-use tokio::sync::mpsc;
+use std::fmt::Debug;
 
 pub mod acba;
 pub mod aeb;
@@ -37,7 +33,7 @@ pub mod moex;
 pub mod sas;
 pub mod unibank;
 pub mod unistream;
-pub mod vtb_am;
+pub mod vtb;
 
 const USER_AGENT: &str = "okhttp/4.12.0";
 
@@ -116,7 +112,7 @@ pub struct Config {
     pub sas: sas::Config,
     pub unibank: unibank::Config,
     pub unistream: unistream::Config,
-    pub vtb_am: vtb_am::Config,
+    pub vtb: vtb::Config,
     pub idpay: idpay::Config,
     #[cfg(feature = "alfa_by")]
     pub alfa_by: alfa_by::Config,
@@ -150,7 +146,7 @@ impl Config {
             Source::SAS => self.sas.enabled,
             Source::Unibank => self.unibank.enabled,
             Source::Unistream => self.unistream.enabled,
-            Source::VtbAm => self.vtb_am.enabled,
+            Source::Vtb => self.vtb.enabled,
             #[cfg(feature = "alfa_by")]
             Source::AlfaBy => self.alfa_by.enabled,
         }
@@ -247,7 +243,7 @@ pub enum Source {
     Mellat,
     Converse,
     AEB,
-    VtbAm,
+    Vtb,
     Artsakh,
     Unibank,
     Unistream,
@@ -374,64 +370,6 @@ pub struct Rate {
     pub sell: Option<Decimal>,
 }
 
-pub async fn collect_all(
-    client: &reqwest::Client,
-    config: &Config,
-) -> HashMap<Source, anyhow::Result<Vec<Rate>>> {
-    let mut results = HashMap::new();
-    let (tx, mut rx) = mpsc::channel(Source::COUNT);
-    for src in Source::iter().filter(|v| config.is_enabled_for(*v)) {
-        #[cfg(feature = "moex")]
-        if src == Source::MoEx {
-            if env::var(moex::ENV_TINKOFF_TOKEN)
-                .unwrap_or_default()
-                .is_empty()
-            {
-                continue;
-            }
-        }
-        let client = client.clone();
-        let config = config.clone();
-        let tx = tx.clone();
-        tokio::spawn(async move {
-            let result = collect(&client, &config, src).await;
-            tx.send((src, result)).await.unwrap();
-        });
-    }
-    drop(tx);
-    while let Some(result) = rx.recv().await {
-        results.insert(result.0, result.1);
-    }
-    results
-}
-
-pub fn filter_collection(
-    results: HashMap<Source, anyhow::Result<Vec<Rate>>>,
-) -> HashMap<Source, Vec<Rate>> {
-    let mut rates = HashMap::new();
-    for (src, result) in results {
-        match result {
-            Ok(v) => {
-                if v.is_empty() {
-                    continue;
-                }
-                let v = v
-                    .iter()
-                    .filter(|v| {
-                        (!v.from.is_empty() && !v.to.is_empty())
-                            && (v.buy.is_some_and(|v| v > dec!(0.0))
-                                || v.sell.is_some_and(|v| v > dec!(0.0)))
-                    })
-                    .cloned()
-                    .collect::<Vec<_>>();
-                rates.insert(src, v);
-            }
-            Err(err) => log::error!("failed to get rate: {err}, src: {src}"),
-        }
-    }
-    rates
-}
-
 pub async fn collect(
     client: &reqwest::Client,
     config: &Config,
@@ -449,7 +387,7 @@ pub async fn collect(
         Source::Mellat => mellat::collect(client, &config.mellat).await?,
         Source::Converse => converse::collect(client, &config.converse).await?,
         Source::AEB => aeb::collect(client, &config.aeb).await?,
-        Source::VtbAm => vtb_am::collect(client, &config.vtb_am).await?,
+        Source::Vtb => vtb::collect(client, &config.vtb).await?,
         Source::Artsakh => artsakh::collect(client, &config.artsakh).await?,
         Source::Unibank => unibank::collect(client, &config.unibank).await?,
         Source::Amio => amio::collect(client, &config.amio).await?,
@@ -562,9 +500,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_vtb_am() -> anyhow::Result<()> {
+    async fn test_vtb() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
-        let _ = collect(&client, &CFG.src, Source::VtbAm).await?;
+        let _ = collect(&client, &CFG.src, Source::Vtb).await?;
         Ok(())
     }
 

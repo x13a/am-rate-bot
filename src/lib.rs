@@ -9,7 +9,7 @@ pub mod graph;
 pub mod source;
 
 pub const DUNNO: &str = r"¯\_(ツ)_/¯";
-const ENV_CONFIG: &str = "CONFIG";
+const ENV_CONFIG: &str = "BOT_CONFIG";
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {

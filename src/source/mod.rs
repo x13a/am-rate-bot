@@ -6,8 +6,6 @@ use std::fmt::Debug;
 
 pub mod acba;
 pub mod aeb;
-#[cfg(feature = "alfa_by")]
-pub mod alfa_by;
 pub mod ameria;
 pub mod amio;
 pub mod ararat;
@@ -28,8 +26,6 @@ pub mod ineco;
 pub mod lsoft;
 pub mod mellat;
 pub mod mir;
-#[cfg(feature = "moex")]
-pub mod moex;
 pub mod sas;
 pub mod unibank;
 pub mod unistream;
@@ -107,15 +103,11 @@ pub struct Config {
     pub ineco: ineco::Config,
     pub mellat: mellat::Config,
     pub mir: mir::Config,
-    #[cfg(feature = "moex")]
-    pub moex: moex::Config,
     pub sas: sas::Config,
     pub unibank: unibank::Config,
     pub unistream: unistream::Config,
     pub vtb: vtb::Config,
     pub idpay: idpay::Config,
-    #[cfg(feature = "alfa_by")]
-    pub alfa_by: alfa_by::Config,
 }
 
 impl Config {
@@ -141,14 +133,10 @@ impl Config {
             Source::Ineco => self.ineco.enabled,
             Source::Mellat => self.mellat.enabled,
             Source::Mir => self.mir.enabled,
-            #[cfg(feature = "moex")]
-            Source::MoEx => self.moex.enabled,
             Source::SAS => self.sas.enabled,
             Source::Unibank => self.unibank.enabled,
             Source::Unistream => self.unistream.enabled,
             Source::Vtb => self.vtb.enabled,
-            #[cfg(feature = "alfa_by")]
-            Source::AlfaBy => self.alfa_by.enabled,
         }
     }
 }
@@ -231,8 +219,6 @@ mod de {
 #[strum(ascii_case_insensitive)]
 pub enum Source {
     Cb,
-    #[cfg(feature = "moex")]
-    MoEx,
     Acba,
     Ameria,
     Ardshin,
@@ -256,44 +242,29 @@ pub enum Source {
     SAS,
     HSBC,
     Avosend,
-    #[cfg(feature = "alfa_by")]
-    AlfaBy,
 }
 
 impl Source {
     pub fn prefix(&self) -> &str {
         if *self == Self::Cb {
             "@"
-        } else if self.is_local_bank() {
+        } else if self.is_bank() {
             "*"
         } else {
             "#"
         }
     }
 
-    pub fn is_local_bank(&self) -> bool {
+    pub fn is_bank(&self) -> bool {
         ![
             Self::Cb,
-            #[cfg(feature = "moex")]
-            Self::MoEx,
             Self::IdPay,
             Self::Mir,
             Self::SAS,
             Self::Avosend,
             Self::Unistream,
-            #[cfg(feature = "alfa_by")]
-            Self::AlfaBy,
         ]
         .contains(self)
-    }
-
-    pub fn is_remove_extra_conv(&self) -> bool {
-        let mut v = self.is_local_bank();
-        #[cfg(feature = "alfa_by")]
-        {
-            v = v || *self == Self::AlfaBy;
-        }
-        v
     }
 }
 
@@ -393,8 +364,6 @@ pub async fn collect(
         Source::Amio => amio::collect(client, &config.amio).await?,
         Source::Byblos => byblos::collect(client, &config.byblos).await?,
         Source::IdBank => idbank::collect(client, &config.idbank).await?,
-        #[cfg(feature = "moex")]
-        Source::MoEx => moex::collect(client, &config.moex).await?,
         Source::Ararat => ararat::collect(client, &config.ararat).await?,
         Source::IdPay => idpay::collect(client, &config.idpay).await?,
         Source::Mir => mir::collect(client, &config.mir).await?,
@@ -402,8 +371,6 @@ pub async fn collect(
         Source::HSBC => hsbc::collect(client, &config.hsbc).await?,
         Source::Avosend => avosend::collect(client, &config.avosend).await?,
         Source::Unistream => unistream::collect(client, &config.unistream).await?,
-        #[cfg(feature = "alfa_by")]
-        Source::AlfaBy => alfa_by::collect(client, &config.alfa_by).await?,
     };
     Ok(rates)
 }
@@ -542,14 +509,6 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(feature = "moex")]
-    #[tokio::test]
-    async fn test_moex() -> anyhow::Result<()> {
-        let client = build_client(&CFG)?;
-        let _ = collect(&client, &CFG.src, Source::MoEx).await?;
-        Ok(())
-    }
-
     #[tokio::test]
     async fn test_ararat() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
@@ -597,14 +556,6 @@ mod tests {
     async fn test_unistream() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
         let _ = collect(&client, &CFG.src, Source::Unistream).await?;
-        Ok(())
-    }
-
-    #[cfg(feature = "alfa_by")]
-    #[tokio::test]
-    async fn test_alfa_by() -> anyhow::Result<()> {
-        let client = build_client(&CFG)?;
-        let _ = collect(&client, &CFG.src, Source::AlfaBy).await?;
         Ok(())
     }
 }

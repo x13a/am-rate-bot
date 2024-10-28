@@ -1,8 +1,6 @@
-use crate::source::{self, moex, Config, Rate, Source};
+use crate::source::{self, Config, Rate, Source};
 use rust_decimal_macros::dec;
 use std::collections::HashMap;
-#[cfg(feature = "moex")]
-use std::env;
 use strum::{EnumCount, IntoEnumIterator};
 use tokio::sync::mpsc;
 
@@ -13,15 +11,6 @@ pub async fn collect_all(
     let mut results = HashMap::new();
     let (tx, mut rx) = mpsc::channel(Source::COUNT);
     for src in Source::iter().filter(|v| config.is_enabled_for(*v)) {
-        #[cfg(feature = "moex")]
-        if src == Source::MoEx {
-            if env::var(moex::ENV_TINKOFF_TOKEN)
-                .unwrap_or_default()
-                .is_empty()
-            {
-                continue;
-            }
-        }
         let client = client.clone();
         let config = config.clone();
         let tx = tx.clone();

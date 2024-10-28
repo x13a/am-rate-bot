@@ -96,16 +96,6 @@ enabled = true
 rates_url = "https://api-user.vamprivet.ru/backend/api/v2/currencies/rates"
 enabled = true
 
-[src.moex]
-base_url = "https://invest-public-api.tinkoff.ru/rest"
-path_order_book = "tinkoff.public.invest.api.contract.v1.MarketDataService/GetOrderBook"
-path_currency = "tinkoff.public.invest.api.contract.v1.InstrumentsService/CurrencyBy"
-enabled = true
-
-# AMDRUB_TOM
-req.instrument_id = "BBG0013J7V24"
-req.depth = 1
-
 [src.sas]
 rates_url = "https://www.sas.am/app/"
 enabled = true
@@ -133,8 +123,3 @@ enabled = true
 commission_rate = 0.9
 # idpay > ru_card
 commission_rate_to_ru_card = 0.3
-
-[src.alfa_by]
-rates_url = "https://www.alfabank.by/exchange/digital"
-enabled = true
-commission_rate = 1.0

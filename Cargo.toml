@@ -1,6 +1,6 @@
 [package]
 name = "am-rate-bot"
-version = "0.26.10"
+version = "0.27.0"
 edition = "2021"
 authors = ["lucky"]
 
@@ -26,11 +26,8 @@ derive_more = { version = "1.0", features = ["display"] }
 thiserror = "1.0"
 anyhow = "1.0"
 
-# vtb_am/hsbc/sas/alfa_by src html parser
+# vtb/hsbc/sas src html parser
 select = "0.6.0"
 
 [features]
-default = ["moex", "alfa_by"]
 github_ci = []
-moex = []
-alfa_by = []

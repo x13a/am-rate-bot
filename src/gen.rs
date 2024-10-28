@@ -49,7 +49,7 @@ pub fn conv_table(
             paths.iter_mut().for_each(|v| v.1 = dec!(1.0) / v.1);
         }
         paths.sort_by(|a, b| sort(a.1, b.1));
-        if src.is_remove_extra_conv() {
+        if src.is_bank() {
             let max_len = paths.iter().map(|v| v.0.len()).max().unwrap_or(3);
             for i in 2..max_len + 1 {
                 let pos = paths.iter().position(|v| v.0.len() == i);
@@ -79,7 +79,7 @@ pub fn conv_table(
     });
     let best_rate = table
         .iter()
-        .filter(|r| r.src.is_local_bank())
+        .filter(|r| r.src.is_bank())
         .map(|r| r.rate)
         .next()
         .unwrap_or_default();

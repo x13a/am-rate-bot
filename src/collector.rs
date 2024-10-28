@@ -58,7 +58,7 @@ pub fn filter_collection(
                     .collect::<Vec<_>>();
                 rates.insert(src, v);
             }
-            Err(err) => log::error!("failed to get rate: {err}, src: {src}"),
+            Err(err) => log::error!("src: {src}, err: {err}"),
         }
     }
     rates

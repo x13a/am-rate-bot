@@ -82,8 +82,8 @@ pub async fn run(db: Arc<Db>, cfg: Arc<Config>) -> anyhow::Result<()> {
         .throttle(Limits::default())
         .parse_mode(ParseMode::Html);
     bot.set_my_commands(Command::bot_commands()).await?;
-    let handler = dptree::entry().branch(
-        Update::filter_message()
+    let handler = Update::filter_message().branch(
+        dptree::entry()
             .filter_command::<Command>()
             .endpoint(command),
     );

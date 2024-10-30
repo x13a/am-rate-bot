@@ -24,6 +24,7 @@ use teloxide::{
 
 type Bot = DefaultParseMode<Throttle<teloxide::Bot>>;
 const WELCOME_MSG: &str = "Meow!";
+const ENV_BOT_TOKEN: &str = "TELOXIDE_TOKEN";
 
 #[derive(BotCommands, Clone)]
 #[command(
@@ -81,6 +82,9 @@ pub async fn run(db: Arc<Db>, cfg: Arc<Config>) -> anyhow::Result<()> {
     let bot = teloxide::Bot::from_env()
         .throttle(Limits::default())
         .parse_mode(ParseMode::Html);
+    unsafe {
+        env::remove_var(ENV_BOT_TOKEN);
+    }
     bot.set_my_commands(Command::bot_commands()).await?;
     let handler = Update::filter_message().branch(
         dptree::entry()

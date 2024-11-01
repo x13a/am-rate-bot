@@ -2,7 +2,6 @@ pub use crate::source::idbank::Response;
 use crate::source::{idbank, percent, BaseConfigTrait, Currency, Error, Rate, RateType};
 use anyhow::bail;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -36,12 +35,12 @@ pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Resul
     let mut rate_sell = None;
     let mut rate_buy_idbank = None;
     if let Some(buy) = rate.buy {
-        if buy > dec!(0.0) {
+        if buy > Decimal::ZERO {
             rate_buy = Some(buy - percent(config.commission_rate, buy));
         }
     };
     if let Some(sell) = rate.sell {
-        if sell > dec!(0.0) {
+        if sell > Decimal::ZERO {
             rate_sell = Some(
                 sell + percent(
                     config.commission_rate + config.commission_rate_to_ru_card,
@@ -51,7 +50,7 @@ pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Resul
         }
     }
     if let Some(sell) = rate.csh_sell_trf {
-        if sell > dec!(0.0) {
+        if sell > Decimal::ZERO {
             rate_buy_idbank = Some(sell - percent(config.commission_rate, sell));
         }
     }

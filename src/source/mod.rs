@@ -1,6 +1,5 @@
 use anyhow::ensure;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use serde::{de::DeserializeOwned, Deserialize};
 use std::fmt::Debug;
 
@@ -154,7 +153,7 @@ impl BaseConfigTrait for BaseConfig {
 }
 
 fn percent(value: Decimal, from: Decimal) -> Decimal {
-    value / dec!(100.0) * from
+    value / Decimal::ONE_HUNDRED * from
 }
 
 mod de {

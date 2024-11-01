@@ -1,6 +1,5 @@
 use crate::source::{Currency, Rate, RateType};
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
@@ -19,13 +18,13 @@ pub fn build(rates: &[Rate], rate_type: RateType) -> HashMap<Currency, Vec<Edge>
         .filter(|r| [rate_type, RateType::Cb].contains(&r.rate_type))
     {
         if let Some(buy) = rate.buy {
-            if buy > dec!(0.0) {
+            if buy > Decimal::ZERO {
                 add_edge(rate.from.clone(), rate.to.clone(), buy);
             }
         }
         if let Some(sell) = rate.sell {
-            if sell > dec!(0.0) {
-                add_edge(rate.to.clone(), rate.from.clone(), dec!(1.0) / sell);
+            if sell > Decimal::ZERO {
+                add_edge(rate.to.clone(), rate.from.clone(), Decimal::ONE / sell);
             }
         }
     }
@@ -47,7 +46,7 @@ pub fn find_all_paths(
         &mut visited,
         &mut path,
         &mut paths,
-        dec!(1.0),
+        Decimal::ONE,
     );
     paths
 }

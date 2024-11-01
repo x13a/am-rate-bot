@@ -1,1 +1,4 @@
 /target
+compose.*
+!compose.polling.yaml
+!compose.webhook.yaml

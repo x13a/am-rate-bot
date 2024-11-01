@@ -4,7 +4,6 @@ use crate::{
     DUNNO,
 };
 use rust_decimal::{Decimal, RoundingStrategy};
-use rust_decimal_macros::dec;
 use std::{collections::HashMap, fmt::Write};
 
 const RATE_DP: u32 = 4;
@@ -46,7 +45,7 @@ pub fn conv_table(
             continue;
         }
         if inv {
-            paths.iter_mut().for_each(|v| v.1 = dec!(1.0) / v.1);
+            paths.iter_mut().for_each(|v| v.1 = Decimal::ONE / v.1);
         }
         paths.sort_by(|a, b| sort(a.1, b.1));
         if src.is_bank() {
@@ -67,7 +66,7 @@ pub fn conv_table(
                 src: src.clone(),
                 rate,
                 rate_str,
-                diff: dec!(0.0),
+                diff: Decimal::ZERO,
                 diff_str: "".into(),
                 path: path.clone(),
             });
@@ -84,7 +83,7 @@ pub fn conv_table(
         .next()
         .unwrap_or_default();
     let mut is_desc = false;
-    let mut rate = dec!(0.0);
+    let mut rate = Decimal::ZERO;
     for (idx, row) in table.iter().enumerate() {
         if idx == 0 {
             rate = row.rate;
@@ -99,7 +98,7 @@ pub fn conv_table(
     }
     let mut diff_width: usize = 0;
     table.iter_mut().for_each(|row| {
-        row.diff = ((best_rate - row.rate) / row.rate) * dec!(100.0);
+        row.diff = ((best_rate - row.rate) / row.rate) * Decimal::ONE_HUNDRED;
         if is_desc && !row.diff.is_zero() {
             row.diff = -row.diff;
         }

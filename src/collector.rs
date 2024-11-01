@@ -1,5 +1,5 @@
 use crate::source::{self, Config, Rate, Source};
-use rust_decimal_macros::dec;
+use rust_decimal::Decimal;
 use std::collections::HashMap;
 use strum::{EnumCount, IntoEnumIterator};
 use tokio::sync::mpsc;
@@ -40,8 +40,8 @@ pub fn filter_collection(
                     .iter()
                     .filter(|v| {
                         (!v.from.is_empty() && !v.to.is_empty())
-                            && (v.buy.is_some_and(|v| v > dec!(0.0))
-                                || v.sell.is_some_and(|v| v > dec!(0.0)))
+                            && (v.buy.is_some_and(|v| v > Decimal::ZERO)
+                                || v.sell.is_some_and(|v| v > Decimal::ZERO))
                     })
                     .cloned()
                     .collect::<Vec<_>>();

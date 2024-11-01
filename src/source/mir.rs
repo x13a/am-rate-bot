@@ -2,7 +2,6 @@ pub use crate::source::BaseConfig as Config;
 use crate::source::{de, get_json, Currency as ModCurrency, Error, Rate, RateType};
 use anyhow::bail;
 use rust_decimal::{serde::arbitrary_precision, Decimal};
-use rust_decimal_macros::dec;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -38,13 +37,13 @@ pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Resul
     else {
         bail!(Error::NoRates);
     };
-    let buy = if rate.value_sell > dec!(0.0) {
-        Some(dec!(1.0) / rate.value_sell)
+    let buy = if rate.value_sell > Decimal::ZERO {
+        Some(Decimal::ONE / rate.value_sell)
     } else {
         None
     };
-    let sell = if rate.value_buy > dec!(0.0) {
-        Some(dec!(1.0) / rate.value_buy)
+    let sell = if rate.value_buy > Decimal::ZERO {
+        Some(Decimal::ONE / rate.value_buy)
     } else {
         None
     };

@@ -1,7 +1,6 @@
 pub use crate::source::BaseConfig as Config;
 use crate::source::{get_json, Currency, Rate, RateType};
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -33,7 +32,7 @@ pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Resul
             continue;
         };
         let from = Currency::new(iso);
-        let mut amount = dec!(1.0);
+        let mut amount = Decimal::ONE;
         if let Some(s) = ws.next() {
             let Ok(new_amount) = s.parse() else {
                 continue;

@@ -1,4 +1,7 @@
-use crate::source::{self, Config, Rate, Source};
+use crate::{
+    graph,
+    source::{self, Config, Rate, RateType, Source},
+};
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 use strum::{EnumCount, IntoEnumIterator};
@@ -45,6 +48,9 @@ pub fn filter_collection(
                     })
                     .cloned()
                     .collect::<Vec<_>>();
+                if graph::detect_arbitrage(&v, RateType::NoCash) {
+                    log::info!("arbitrage detected: {src}");
+                }
                 rates.insert(src, v);
             }
             Err(err) => log::error!("src: {src}, err: {err}"),

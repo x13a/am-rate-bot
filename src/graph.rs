@@ -1,5 +1,5 @@
 use crate::source::{Currency, Rate, RateType};
-use rust_decimal::Decimal;
+use rust_decimal::{prelude::ToPrimitive, Decimal};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
@@ -58,27 +58,28 @@ fn dfs(
     visited: &mut HashSet<Currency>,
     path: &mut Vec<Currency>,
     paths: &mut Vec<(Vec<Currency>, Decimal)>,
-    cumulative_rate: Decimal,
+    rate: Decimal,
 ) {
     visited.insert(from.clone());
     path.push(from.clone());
     if from == to {
-        paths.push((path.clone(), cumulative_rate));
+        paths.push((path.clone(), rate));
     } else {
         if let Some(edges) = graph.get(&from) {
             for edge in edges {
-                if !visited.contains(&edge.to) {
-                    let new_cumulative_rate = cumulative_rate * edge.rate;
-                    dfs(
-                        graph,
-                        edge.to.clone(),
-                        to.clone(),
-                        visited,
-                        path,
-                        paths,
-                        new_cumulative_rate,
-                    );
+                if visited.contains(&edge.to) {
+                    continue;
                 }
+                let new_rate = rate * edge.rate;
+                dfs(
+                    graph,
+                    edge.to.clone(),
+                    to.clone(),
+                    visited,
+                    path,
+                    paths,
+                    new_rate,
+                );
             }
         }
     }
@@ -86,10 +87,71 @@ fn dfs(
     visited.remove(&from);
 }
 
+pub fn detect_arbitrage(rates: &[Rate], rate_type: RateType) -> bool {
+    let rates = rates
+        .iter()
+        .filter(|v| v.rate_type == rate_type)
+        .cloned()
+        .collect::<Vec<_>>();
+    let currency_indices = {
+        let mut map = HashMap::new();
+        let mut idx = 0;
+        for rate in &rates {
+            if !map.contains_key(&rate.from) {
+                map.insert(rate.from.clone(), idx);
+                idx += 1;
+            }
+            if !map.contains_key(&rate.to) {
+                map.insert(rate.to.clone(), idx);
+                idx += 1;
+            }
+        }
+        map
+    };
+    if currency_indices.is_empty() {
+        return false;
+    }
+    let num_currencies = currency_indices.len();
+    let mut dist = vec![f64::INFINITY; num_currencies];
+    dist[0] = 0.0;
+    let mut edges = Vec::new();
+    for rate in &rates {
+        let from = currency_indices.get(&rate.from).unwrap();
+        let to = currency_indices.get(&rate.to).unwrap();
+        if let Some(buy) = rate.buy {
+            if buy > Decimal::ZERO {
+                let weight = -buy.to_f64().unwrap().ln();
+                edges.push((*from, *to, weight));
+            }
+        }
+        if let Some(sell) = rate.sell {
+            if sell > Decimal::ZERO {
+                let weight = -(Decimal::ONE / sell).to_f64().unwrap().ln();
+                edges.push((*to, *from, weight));
+            }
+        }
+    }
+    const EPSILON: f64 = 1e-8;
+    for _ in 0..num_currencies - 1 {
+        for &(u, v, weight) in &edges {
+            if dist[u] + weight < dist[v] - EPSILON {
+                dist[v] = dist[u] + weight;
+            }
+        }
+    }
+    for &(u, v, weight) in &edges {
+        if dist[u] + weight < dist[v] - EPSILON {
+            return true;
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::source::acba;
+    use rust_decimal_macros::dec;
 
     const ACBA_DATA: &str = r#"{
       "Description": null,
@@ -303,5 +365,89 @@ mod tests {
             let _ = find_all_paths(&graph, from.clone(), to.clone());
         }
         Ok(())
+    }
+
+    #[test]
+    fn test_arbitrage_true_buy() {
+        let rates = vec![
+            Rate {
+                from: Currency::usd(),
+                to: Currency::eur(),
+                rate_type: RateType::NoCash,
+                buy: Some(dec!(0.83)),
+                sell: Some(dec!(0.85)),
+            },
+            Rate {
+                from: Currency::eur(),
+                to: Currency::new("CHF"),
+                rate_type: RateType::NoCash,
+                buy: Some(dec!(0.88)),
+                sell: Some(dec!(0.9)),
+            },
+            Rate {
+                from: Currency::new("CHF"),
+                to: Currency::usd(),
+                rate_type: RateType::NoCash,
+                buy: Some(dec!(1.37)),
+                sell: Some(dec!(1.5)),
+            },
+        ];
+        assert!(detect_arbitrage(&rates, RateType::NoCash));
+    }
+
+    #[test]
+    fn test_arbitrage_true_sell() {
+        let rates = vec![
+            Rate {
+                from: Currency::eur(),
+                to: Currency::usd(),
+                rate_type: RateType::NoCash,
+                buy: Some(dec!(1.1)),
+                sell: Some(dec!(1.2)),
+            },
+            Rate {
+                from: Currency::usd(),
+                to: Currency::new("CHF"),
+                rate_type: RateType::NoCash,
+                buy: Some(dec!(0.7)),
+                sell: Some(dec!(0.75)),
+            },
+            Rate {
+                from: Currency::new("CHF"),
+                to: Currency::eur(),
+                rate_type: RateType::NoCash,
+                buy: Some(dec!(1.05)),
+                sell: Some(dec!(1.1)),
+            },
+        ];
+        assert!(detect_arbitrage(&rates, RateType::NoCash));
+    }
+
+    #[test]
+    fn test_arbitrage_false() {
+        let rates = vec![
+            Rate {
+                from: Currency::usd(),
+                to: Currency::eur(),
+                rate_type: RateType::NoCash,
+                buy: Some(dec!(0.8)),
+                sell: Some(dec!(0.85)),
+            },
+            Rate {
+                from: Currency::eur(),
+                to: Currency::new("CHF"),
+                rate_type: RateType::NoCash,
+                buy: Some(dec!(0.9)),
+                sell: Some(dec!(0.95)),
+            },
+            Rate {
+                from: Currency::new("CHF"),
+                to: Currency::usd(),
+                rate_type: RateType::NoCash,
+                buy: Some(dec!(1.38)),
+                sell: Some(dec!(1.4)),
+            },
+        ];
+        assert!(!detect_arbitrage(&rates, RateType::NoCash));
     }
 }

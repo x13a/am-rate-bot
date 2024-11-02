@@ -38,14 +38,19 @@ pub fn conv_table(
     } else {
         |a: Decimal, b: Decimal| b.partial_cmp(&a).expect("panic")
     };
-    for (src, rates) in rates {
+    'outer: for (src, rates) in rates {
         let graph = graph::build(&rates, rate_type);
         let mut paths = graph::find_all_paths(&graph, from.clone(), to.clone());
         if paths.is_empty() {
             continue;
         }
         if inv {
-            paths.iter_mut().for_each(|v| v.1 = Decimal::ONE / v.1);
+            for path in paths.iter_mut() {
+                if path.1.is_zero() {
+                    continue 'outer;
+                }
+                path.1 = Decimal::ONE / path.1;
+            }
         }
         paths.sort_by(|a, b| sort(a.1, b.1));
         if src.is_bank() {
@@ -97,14 +102,17 @@ pub fn conv_table(
         }
     }
     let mut diff_width: usize = 0;
-    table.iter_mut().for_each(|row| {
+    for row in table.iter_mut() {
+        if row.rate.is_zero() {
+            continue;
+        }
         row.diff = ((best_rate - row.rate) / row.rate) * Decimal::ONE_HUNDRED;
         if is_desc && !row.diff.is_zero() {
             row.diff = -row.diff;
         }
         row.diff_str = decimal_to_string(row.diff, DIFF_DP);
         diff_width = diff_width.max(row.diff_str.len());
-    });
+    }
     let mut s = String::new();
     for row in table {
         writeln!(

@@ -377,12 +377,13 @@ pub async fn collect(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::Config;
     use std::{sync::LazyLock, time::Duration};
 
-    static CFG: LazyLock<crate::Config> =
+    static CFG: LazyLock<Config> =
         LazyLock::new(|| toml::from_str(include_str!("../../config/config.toml")).unwrap());
 
-    fn build_client(cfg: &crate::Config) -> reqwest::Result<reqwest::Client> {
+    fn build_client(cfg: &Config) -> reqwest::Result<reqwest::Client> {
         reqwest::ClientBuilder::new()
             .timeout(Duration::from_secs(cfg.bot.reqwest_timeout))
             .build()

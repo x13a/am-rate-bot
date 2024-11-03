@@ -1,8 +1,9 @@
 use crate::{
+    config::Config,
     db::Db,
     gen,
     source::{Currency, RateType, Source},
-    Config, DUNNO,
+    DUNNO,
 };
 use chrono::{DateTime, Utc};
 use std::{env, str::FromStr, sync::Arc};

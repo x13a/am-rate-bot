@@ -203,14 +203,17 @@ pub fn src_table(src: Source, rates: &HashMap<Source, Vec<Rate>>, rate_type: Rat
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collector::{collect_all, filter_collection};
+    use crate::{
+        collector::{collect_all, filter_collection},
+        config::Config,
+    };
     use std::{sync::LazyLock, time::Duration};
     use strum::IntoEnumIterator;
 
-    static CFG: LazyLock<crate::Config> =
+    static CFG: LazyLock<Config> =
         LazyLock::new(|| toml::from_str(include_str!("../config/config.toml")).unwrap());
 
-    fn build_client(cfg: &crate::Config) -> reqwest::Result<reqwest::Client> {
+    fn build_client(cfg: &Config) -> reqwest::Result<reqwest::Client> {
         reqwest::ClientBuilder::new()
             .timeout(Duration::from_secs(cfg.bot.reqwest_timeout))
             .build()

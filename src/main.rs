@@ -1,8 +1,8 @@
 use am_rate_bot::{
     bot,
     collector::{collect_all, filter_collection},
+    config::Config,
     db::Db,
-    Config,
 };
 use std::{sync::Arc, time::Duration};
 

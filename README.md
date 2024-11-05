@@ -6,7 +6,6 @@ You can try it on [Telegram](https://t.me/am_rate_bot).
 
 <img width="467" alt="Screenshot 2024-10-14 at 16 04 27" src="https://github.com/user-attachments/assets/3f0269c5-354d-4b61-a772-d3748db6636c">
 
-
 ## Setup
 
 ```shell

@@ -203,12 +203,10 @@ pub fn src_table(src: Source, rates: &HashMap<Source, Vec<Rate>>, rate_type: Rat
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        collector::{collect_all, filter_collection},
-        config::Config,
-    };
+    use crate::{collector, config::Config};
     use std::{sync::LazyLock, time::Duration};
-    use strum::IntoEnumIterator;
+    use strum::{EnumCount, IntoEnumIterator};
+    use tokio::sync::mpsc;
 
     static CFG: LazyLock<Config> =
         LazyLock::new(|| toml::from_str(include_str!("../config/config.toml")).unwrap());
@@ -230,11 +228,28 @@ mod tests {
         ]
     }
 
+    async fn collect() -> anyhow::Result<HashMap<Source, Vec<Rate>>> {
+        let client = build_client(&CFG)?;
+        let mut result = HashMap::new();
+        let (tx, mut rx) = mpsc::channel(Source::COUNT);
+        let client = client.clone();
+        let cfg = CFG.clone();
+        {
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                collector::collect(&client, &cfg.src, tx).await;
+            });
+        }
+        drop(tx);
+        while let Some((src, rates)) = rx.recv().await {
+            result.insert(src, rates);
+        }
+        Ok(result)
+    }
+
     #[tokio::test]
     async fn test_conv_table() -> anyhow::Result<()> {
-        let client = build_client(&CFG)?;
-        let results = collect_all(&client, &CFG.src).await;
-        let rates = filter_collection(results);
+        let rates = collect().await?;
         for (from, to) in get_conversations() {
             let _ = conv_table(from.clone(), to.clone(), &rates, RateType::NoCash, false);
             let _ = conv_table(to.clone(), from.clone(), &rates, RateType::NoCash, true);
@@ -244,9 +259,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_src_table() -> anyhow::Result<()> {
-        let client = build_client(&CFG)?;
-        let results = collect_all(&client, &CFG.src).await;
-        let rates = filter_collection(results);
+        let rates = collect().await?;
         for src in Source::iter() {
             let _ = src_table(src, &rates, RateType::NoCash);
         }

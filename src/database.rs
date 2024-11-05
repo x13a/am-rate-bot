@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc, time::SystemTime};
 use tokio::sync::Mutex;
 
 #[derive(Debug)]
-pub struct Db {
+pub struct Database {
     data: Mutex<Data>,
     cache: Mutex<Cache>,
 }
@@ -19,8 +19,8 @@ impl Data {
         self.rates.clone()
     }
 
-    fn set_rates(&mut self, value: &HashMap<Source, Vec<Rate>>) {
-        self.rates.clone_from(value);
+    fn set_rates(&mut self, src: Source, rates: Vec<Rate>) {
+        self.rates.insert(src, rates);
         self.updated_at = SystemTime::now();
     }
 
@@ -100,7 +100,7 @@ impl Cache {
     }
 }
 
-impl Db {
+impl Database {
     #[must_use]
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
@@ -120,9 +120,9 @@ impl Db {
         data.get_rates()
     }
 
-    pub async fn set_rates(&self, value: &HashMap<Source, Vec<Rate>>) {
+    pub async fn set_rates(&self, src: Source, rates: Vec<Rate>) {
         let mut data = self.data.lock().await;
-        data.set_rates(value);
+        data.set_rates(src, rates);
     }
 
     pub async fn clear_cache(&self) {

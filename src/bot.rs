@@ -1,7 +1,7 @@
 use crate::{
     config::Config,
-    db::Db,
-    gen,
+    database::Database,
+    generate,
     source::{Currency, RateType, Source},
     DUNNO,
 };
@@ -79,7 +79,7 @@ enum Command {
     Start(String),
 }
 
-pub async fn run(db: Arc<Db>, cfg: Arc<Config>) -> anyhow::Result<()> {
+pub async fn run(db: Arc<Database>, cfg: Arc<Config>) -> anyhow::Result<()> {
     let bot = teloxide::Bot::from_env()
         .throttle(Limits::default())
         .parse_mode(ParseMode::Html);
@@ -127,7 +127,7 @@ async fn command(
     bot: Bot,
     msg: Message,
     cmd: Command,
-    db: Arc<Db>,
+    db: Arc<Database>,
     cfg: Arc<Config>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     match cmd {
@@ -299,7 +299,7 @@ async fn start_repl(
     value: String,
     bot: Bot,
     msg: Message,
-    db: Arc<Db>,
+    db: Arc<Database>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if value.is_empty() {
         bot.send_message(msg.chat.id, WELCOME_MSG).await?;
@@ -343,7 +343,7 @@ async fn ls_repl(bot: Bot, msg: Message) -> Result<(), Box<dyn std::error::Error
 async fn info_repl(
     bot: Bot,
     msg: Message,
-    db: Arc<Db>,
+    db: Arc<Database>,
     cfg: Arc<Config>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -366,7 +366,7 @@ async fn src_repl(
     rate_type: RateType,
     bot: Bot,
     msg: Message,
-    db: Arc<Db>,
+    db: Arc<Database>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cached = db.get_cache_src(src, rate_type).await;
     let s = match cached {
@@ -374,7 +374,7 @@ async fn src_repl(
         None => {
             log::debug!("empty cache src");
             let rates = db.get_rates().await;
-            let s = gen::src_table(src, &rates, rate_type);
+            let s = generate::src_table(src, &rates, rate_type);
             db.set_cache_src(src, rate_type, s.clone()).await;
             s
         }
@@ -390,7 +390,7 @@ async fn conv_repl(
     inv: bool,
     bot: Bot,
     msg: Message,
-    db: Arc<Db>,
+    db: Arc<Database>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if from.is_empty() || to.is_empty() {
         return dunno_repl(bot, msg).await;
@@ -405,7 +405,7 @@ async fn conv_repl(
             Some(s) => s,
             None => {
                 log::debug!("empty cache conv");
-                let s = gen::conv_table(from.clone(), to.clone(), &rates, rate_type, is_inv);
+                let s = generate::conv_table(from.clone(), to.clone(), &rates, rate_type, is_inv);
                 db.set_cache_conv(from.clone(), to.clone(), rate_type, is_inv, s.clone())
                     .await;
                 s

@@ -24,7 +24,6 @@ use teloxide::{
 };
 
 type Bot = DefaultParseMode<Throttle<teloxide::Bot>>;
-const WELCOME_MSG: &str = "Meow!";
 const ENV_BOT_TOKEN: &str = "TELOXIDE_TOKEN";
 
 #[derive(BotCommands, Clone)]
@@ -139,7 +138,7 @@ async fn command(
             .await?;
         }
         Command::Start(s) => {
-            start_repl(s, bot, msg, db).await?;
+            start_repl(s, bot, msg, db, cfg).await?;
         }
         Command::Usd | Command::UsdCash => {
             conv_repl(
@@ -300,9 +299,10 @@ async fn start_repl(
     bot: Bot,
     msg: Message,
     db: Arc<Database>,
+    cfg: Arc<Config>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if value.is_empty() {
-        bot.send_message(msg.chat.id, WELCOME_MSG).await?;
+        bot.send_message(msg.chat.id, &cfg.bot.welcome_msg).await?;
         return Ok(());
     }
     let mut value = value.clone();

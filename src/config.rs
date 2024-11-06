@@ -16,6 +16,7 @@ pub struct Bot {
     pub update_interval: u64,
     pub polling: bool,
     pub webhook: Webhook,
+    pub welcome_msg: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

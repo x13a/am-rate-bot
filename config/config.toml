@@ -2,6 +2,7 @@
 polling = true
 reqwest_timeout = 10
 update_interval = 180
+welcome_msg = "Meow!"
 
 [bot.webhook]
 host = ""

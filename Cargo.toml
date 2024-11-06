@@ -1,6 +1,6 @@
 [package]
 name = "am-rate-bot"
-version = "0.29.2"
+version = "0.29.3"
 edition = "2021"
 authors = ["lucky"]
 
@@ -23,7 +23,7 @@ regex = "1.11"
 # sugar
 strum = { version = "0.26", features = ["derive"] }
 derive_more = { version = "1.0", features = ["display"] }
-thiserror = "1.0"
+thiserror = "2.0"
 anyhow = "1.0"
 
 # vtb/hsbc/sas src html parser

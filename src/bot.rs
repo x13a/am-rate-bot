@@ -72,7 +72,7 @@ enum Command {
     List,
     #[command(description = "bot info")]
     Info,
-    #[command(description = "help", aliases = ["h", "?"])]
+    #[command(description = "help", aliases = ["h", "?"], hide)]
     Help,
     #[command(description = "welcome", hide)]
     Start(String),

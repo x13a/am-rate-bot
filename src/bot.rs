@@ -99,7 +99,7 @@ pub async fn run(db: Arc<Database>, cfg: Arc<Config>) -> anyhow::Result<()> {
     if cfg.bot.polling {
         dispatcher.dispatch().await;
     } else {
-        let url = format!("https://{}/am-rate-bot/webhook/", cfg.bot.webhook.host).parse()?;
+        let url = cfg.bot.webhook.url.parse()?;
         let listener = webhooks::axum(
             bot.clone(),
             webhooks::Options {

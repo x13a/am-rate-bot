@@ -21,7 +21,7 @@ pub struct Bot {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Webhook {
-    pub host: String,
+    pub url: String,
     pub port: u16,
     pub cert: String,
 }

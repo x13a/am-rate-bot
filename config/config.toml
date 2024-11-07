@@ -5,7 +5,7 @@ update_interval = 300
 welcome_msg = "Meow!"
 
 [bot.webhook]
-host = ""
+url = "https://<HOST>/am-rate-bot/webhook/"
 port = 8000
 cert = "./certs/cert.pem"
 

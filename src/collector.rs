@@ -1,8 +1,12 @@
+#[cfg(feature = "moex")]
+use crate::source::moex;
 use crate::{
     graph,
     source::{self, Config, Rate, RateType, Source},
 };
 use rust_decimal::Decimal;
+#[cfg(feature = "moex")]
+use std::env;
 use strum::IntoEnumIterator;
 use tokio::sync::mpsc;
 
@@ -12,6 +16,15 @@ pub async fn collect(
     tx: mpsc::Sender<(Source, Vec<Rate>)>,
 ) {
     for src in Source::iter().filter(|v| cfg.is_enabled_for(*v)) {
+        #[cfg(feature = "moex")]
+        if src == Source::MOEX {
+            if env::var(moex::ENV_TINKOFF_TOKEN)
+                .unwrap_or_default()
+                .is_empty()
+            {
+                continue;
+            }
+        }
         let client = client.clone();
         let cfg = cfg.clone();
         let tx = tx.clone();

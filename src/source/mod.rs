@@ -25,6 +25,8 @@ pub mod ineco;
 pub mod lsoft;
 pub mod mellat;
 pub mod mir;
+#[cfg(feature = "moex")]
+pub mod moex;
 pub mod sas;
 pub mod unibank;
 pub mod unistream;
@@ -102,6 +104,8 @@ pub struct Config {
     pub ineco: ineco::Config,
     pub mellat: mellat::Config,
     pub mir: mir::Config,
+    #[cfg(feature = "moex")]
+    pub moex: moex::Config,
     pub sas: sas::Config,
     pub unibank: unibank::Config,
     pub unistream: unistream::Config,
@@ -132,6 +136,8 @@ impl Config {
             Source::Ineco => self.ineco.enabled,
             Source::Mellat => self.mellat.enabled,
             Source::Mir => self.mir.enabled,
+            #[cfg(feature = "moex")]
+            Source::MOEX => self.moex.enabled,
             Source::SAS => self.sas.enabled,
             Source::Unibank => self.unibank.enabled,
             Source::Unistream => self.unistream.enabled,
@@ -238,6 +244,8 @@ pub enum Source {
     Ararat,
     IdPay,
     Mir,
+    #[cfg(feature = "moex")]
+    MOEX,
     SAS,
     HSBC,
     Avosend,
@@ -259,6 +267,8 @@ impl Source {
             Self::Cb,
             Self::IdPay,
             Self::Mir,
+            #[cfg(feature = "moex")]
+            Self::MOEX,
             Self::SAS,
             Self::Avosend,
             Self::Unistream,
@@ -366,6 +376,8 @@ pub async fn collect(
         Source::Ararat => ararat::collect(client, &config.ararat).await?,
         Source::IdPay => idpay::collect(client, &config.idpay).await?,
         Source::Mir => mir::collect(client, &config.mir).await?,
+        #[cfg(feature = "moex")]
+        Source::MOEX => moex::collect(client, &config.moex).await?,
         Source::SAS => sas::collect(client, &config.sas).await?,
         Source::HSBC => hsbc::collect(client, &config.hsbc).await?,
         Source::Avosend => avosend::collect(client, &config.avosend).await?,
@@ -527,6 +539,14 @@ mod tests {
     async fn test_mir() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
         let _ = collect(&client, &CFG.src, Source::Mir).await?;
+        Ok(())
+    }
+
+    #[cfg(feature = "moex")]
+    #[tokio::test]
+    async fn test_moex() -> anyhow::Result<()> {
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::MOEX).await?;
         Ok(())
     }
 

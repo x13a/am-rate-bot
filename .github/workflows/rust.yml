@@ -27,3 +27,5 @@ jobs:
 
     - name: Run tests
       run: cargo test --verbose --features github_ci
+      env:
+        TINKOFF_TOKEN: ${{ secrets.TINKOFF_TOKEN }}

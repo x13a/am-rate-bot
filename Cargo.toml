@@ -1,6 +1,6 @@
 [package]
 name = "am-rate-bot"
-version = "0.30.0"
+version = "0.31.0"
 edition = "2021"
 authors = ["lucky"]
 
@@ -30,4 +30,6 @@ anyhow = "1.0"
 select = "0.6.0"
 
 [features]
+default = ["moex"]
 github_ci = []
+moex = []

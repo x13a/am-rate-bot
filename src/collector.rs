@@ -6,7 +6,7 @@ use crate::{
 };
 use rust_decimal::Decimal;
 #[cfg(feature = "moex")]
-use std::env;
+use std::{env, sync::LazyLock};
 use strum::IntoEnumIterator;
 use tokio::sync::mpsc;
 
@@ -15,15 +15,16 @@ pub async fn collect(
     cfg: &Config,
     tx: mpsc::Sender<(Source, Vec<Rate>)>,
 ) {
+    #[cfg(feature = "moex")]
+    static MOEX_OK: LazyLock<bool> = LazyLock::new(|| {
+        !env::var(moex::ENV_TINKOFF_TOKEN)
+            .unwrap_or_default()
+            .is_empty()
+    });
     for src in Source::iter().filter(|v| cfg.is_enabled_for(*v)) {
         #[cfg(feature = "moex")]
-        if src == Source::MOEX {
-            if env::var(moex::ENV_TINKOFF_TOKEN)
-                .unwrap_or_default()
-                .is_empty()
-            {
-                continue;
-            }
+        if src == Source::MOEX && !MOEX_OK.clone() {
+            continue;
         }
         let client = client.clone();
         let cfg = cfg.clone();

@@ -1,8 +1,9 @@
 use crate::source::{Currency as ModCurrency, Rate, RateType};
+use anyhow::bail;
 use rust_decimal::Decimal;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_repr::Serialize_repr;
-use std::env;
+use std::{env, sync::LazyLock};
 
 pub const ENV_TINKOFF_TOKEN: &str = "TINKOFF_TOKEN";
 
@@ -112,11 +113,23 @@ where
     T1: DeserializeOwned,
     T2: Serialize + ?Sized,
 {
-    let token = env::var(ENV_TINKOFF_TOKEN)?;
+    static TOKEN: LazyLock<String> = LazyLock::new(|| {
+        let v = env::var("TINKOFF_TOKEN");
+        unsafe {
+            env::remove_var(ENV_TINKOFF_TOKEN);
+        }
+        v.unwrap_or_default()
+    });
+    if TOKEN.is_empty() {
+        bail!(env::VarError::NotPresent);
+    }
     let resp = client
         .post(format!("{}/{}", base_url, url_path))
         .json(req_data)
-        .header(reqwest::header::AUTHORIZATION, format!("Bearer {token}"))
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("Bearer {}", TOKEN.to_string()),
+        )
         .send()
         .await?
         .error_for_status()?

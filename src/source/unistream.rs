@@ -1,8 +1,5 @@
 pub use crate::source::unibank::Response;
-use crate::source::{
-    lsoft::{request::Request, LSoftRequest},
-    percent, unibank, BaseConfigTrait, Currency, Error, Rate, RateType,
-};
+use crate::source::{percent, unibank, BaseConfigTrait, Currency, Error, Rate, RateType};
 use anyhow::bail;
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -11,7 +8,6 @@ use serde::Deserialize;
 pub struct Config {
     pub rates_url: String,
     pub enabled: bool,
-    pub req: Request,
     pub commission_rate_from_bank: Decimal,
     pub commission_rate_from_any_card: Decimal,
 }
@@ -19,12 +15,6 @@ pub struct Config {
 impl BaseConfigTrait for Config {
     fn rates_url(&self) -> String {
         self.rates_url.clone()
-    }
-}
-
-impl LSoftRequest for Config {
-    fn req(&self) -> Request {
-        self.req.clone()
     }
 }
 

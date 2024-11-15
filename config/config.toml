@@ -40,7 +40,6 @@ enabled = true
 [src.artsakh]
 rates_url = "https://m.artsakhbank.am:9443/get_ART.php"
 enabled = true
-req.id = "6"
 
 [src.avosend]
 rates_url = "https://avosend.com/api/comission.php"
@@ -114,7 +113,6 @@ enabled = true
 [src.unibank]
 rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
 enabled = true
-req.id = "5"
 
 [src.unistream]
 rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
@@ -122,7 +120,6 @@ enabled = true
 # card
 commission_rate_from_bank = 0.9
 commission_rate_from_any_card = 2.5
-req.id = "5"
 
 [src.vtb]
 rates_url = "https://vtb.am/ru/currency"

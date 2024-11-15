@@ -1,3 +1,4 @@
+pub use crate::source::BaseConfig as Config;
 use crate::source::{de, BaseConfigTrait, Currency, Rate, RateType, USER_AGENT};
 use rust_decimal::Decimal;
 use serde::{de::DeserializeOwned, Deserialize};
@@ -65,35 +66,11 @@ pub mod request {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct Config {
-    pub rates_url: String,
-    pub enabled: bool,
-    pub req: request::Request,
-}
-
-impl BaseConfigTrait for Config {
-    fn rates_url(&self) -> String {
-        self.rates_url.clone()
-    }
-}
-
-pub trait LSoftRequest {
-    fn req(&self) -> request::Request;
-}
-
-impl LSoftRequest for Config {
-    fn req(&self) -> request::Request {
-        self.req.clone()
-    }
-}
-
 async fn post<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
 where
     T1: DeserializeOwned,
-    T2: BaseConfigTrait + LSoftRequest,
+    T2: BaseConfigTrait,
 {
-    let req = config.req();
     let req_data = request::Request {
         client: "mobile".into(),
         device: "android".into(),
@@ -101,7 +78,7 @@ where
         lang: "1".into(),
         operation: "getCurrencyList".into(),
         accesstoken: "".into(),
-        id: req.id.clone(),
+        id: "8".into(),
         get_currency_list_parameters: Default::default(),
         userid: "".into(),
     };
@@ -120,7 +97,7 @@ where
 
 pub async fn collect<T1>(client: &reqwest::Client, config: &T1) -> anyhow::Result<Vec<Rate>>
 where
-    T1: BaseConfigTrait + LSoftRequest,
+    T1: BaseConfigTrait,
 {
     let resp: Response = post(client, config).await?;
     let mut rates = vec![];

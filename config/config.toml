@@ -88,6 +88,12 @@ enabled = true
 rates_url = "https://www.inecobank.am/api/rates"
 enabled = true
 
+[src.kwikpay]
+rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
+enabled = true
+# card
+commission_rate = 2.5
+
 [src.mellat]
 rates_url = "https://api.mellatbank.am/api/v1/rate/list"
 enabled = true

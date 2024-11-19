@@ -22,6 +22,7 @@ pub mod hsbc;
 pub mod idbank;
 pub mod idpay;
 pub mod ineco;
+pub mod kwikpay;
 pub mod lsoft;
 pub mod mellat;
 pub mod mir;
@@ -102,6 +103,7 @@ pub struct Config {
     pub hsbc: hsbc::Config,
     pub idbank: idbank::Config,
     pub ineco: ineco::Config,
+    pub kwikpay: kwikpay::Config,
     pub mellat: mellat::Config,
     pub mir: mir::Config,
     #[cfg(feature = "moex")]
@@ -134,6 +136,7 @@ impl Config {
             Source::IdBank => self.idbank.enabled,
             Source::IdPay => self.idpay.enabled,
             Source::Ineco => self.ineco.enabled,
+            Source::Kwikpay => self.kwikpay.enabled,
             Source::Mellat => self.mellat.enabled,
             Source::Mir => self.mir.enabled,
             #[cfg(feature = "moex")]
@@ -231,6 +234,7 @@ pub enum Source {
     Evoca,
     Fast,
     Ineco,
+    Kwikpay,
     Mellat,
     Converse,
     AEB,
@@ -271,6 +275,7 @@ impl Source {
             Self::MOEX,
             Self::SAS,
             Self::Avosend,
+            Self::Kwikpay,
             Self::Unistream,
         ]
         .contains(self)
@@ -364,6 +369,7 @@ pub async fn collect(
         Source::Evoca => evoca::collect(client, &config.evoca).await?,
         Source::Fast => fast::collect(client, &config.fast).await?,
         Source::Ineco => ineco::collect(client, &config.ineco).await?,
+        Source::Kwikpay => kwikpay::collect(client, &config.kwikpay).await?,
         Source::Mellat => mellat::collect(client, &config.mellat).await?,
         Source::Converse => converse::collect(client, &config.converse).await?,
         Source::AEB => aeb::collect(client, &config.aeb).await?,
@@ -440,6 +446,13 @@ mod tests {
     async fn test_ineco() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
         let _ = collect(&client, &CFG.src, Source::Ineco).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_kwikpay() -> anyhow::Result<()> {
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::Kwikpay).await?;
         Ok(())
     }
 

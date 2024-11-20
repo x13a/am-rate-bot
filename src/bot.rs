@@ -46,10 +46,6 @@ enum Command {
     RubEur,
     #[command(description = "USD/EUR ($ - €)")]
     UsdEur,
-    #[command(description = "<FROM> <TO>?", parse_with = parse_conv)]
-    Conv { from: Currency, to: Currency },
-    #[command(description = "<SOURCE>")]
-    Get { src: Source },
     #[command(description = "USD cash ($)")]
     UsdCash,
     #[command(description = "EUR cash (€)")]
@@ -64,10 +60,16 @@ enum Command {
     RubEurCash,
     #[command(description = "USD/EUR cash ($ - €)")]
     UsdEurCash,
+    #[command(description = "<FROM> <TO>?", parse_with = parse_conv)]
+    Conv { from: Currency, to: Currency },
     #[command(description = "<FROM> <TO>? cash", parse_with = parse_conv)]
     ConvCash { from: Currency, to: Currency },
+    #[command(description = "<SOURCE>")]
+    Get { src: Source },
     #[command(description = "<SOURCE> cash")]
     GetCash { src: Source },
+    #[command(description = "<SOURCE> card")]
+    GetCard { src: Source },
     #[command(description = "list sources", aliases = ["ls"])]
     List,
     #[command(description = "bot info")]
@@ -260,12 +262,13 @@ async fn command(
             )
             .await?;
         }
-        Command::Get { src } | Command::GetCash { src } => {
+        Command::Get { src } | Command::GetCash { src } | Command::GetCard { src } => {
             src_repl(
                 src,
                 match cmd {
+                    Command::Get { .. } => RateType::NoCash,
                     Command::GetCash { .. } => RateType::Cash,
-                    _ => RateType::NoCash,
+                    _ => RateType::Card,
                 },
                 bot,
                 msg,

@@ -20,8 +20,10 @@ pub struct Result {
 pub struct CurrencyRate {
     #[serde(deserialize_with = "de::empty_decimal")]
     pub buy: Option<Decimal>,
-    pub cards_buy: String,
-    pub cards_sell: String,
+    #[serde(deserialize_with = "de::empty_decimal")]
+    pub cards_buy: Option<Decimal>,
+    #[serde(deserialize_with = "de::empty_decimal")]
+    pub cards_sell: Option<Decimal>,
     #[serde(deserialize_with = "de::empty_decimal")]
     pub csh_buy: Option<Decimal>,
     #[serde(deserialize_with = "de::empty_decimal")]
@@ -71,6 +73,13 @@ pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Resul
             rate_type: RateType::Cash,
             buy: rate.csh_buy,
             sell: rate.csh_sell,
+        });
+        rates.push(Rate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::Card,
+            buy: rate.cards_buy,
+            sell: rate.cards_sell,
         });
     }
     Ok(rates)

@@ -18,6 +18,7 @@ pub struct Result {
 pub struct Rates {
     pub cash: Vec<Rate>,
     pub non_cash: Vec<Rate>,
+    pub card: Vec<Rate>,
     pub cross: Vec<CrossRate>,
 }
 
@@ -49,6 +50,7 @@ pub(crate) fn parse(resp: Response) -> anyhow::Result<Vec<ModRate>> {
     for (rate_type, rates) in [
         (RateType::NoCash, resp.result.rates.non_cash),
         (RateType::Cash, resp.result.rates.cash),
+        (RateType::Card, resp.result.rates.card),
     ] {
         let rates = rates
             .iter()

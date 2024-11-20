@@ -14,6 +14,8 @@ pub struct Item {
     pub code: Currency,
     pub cash: Rate,
     pub cashless: Rate,
+    pub card: Rate,
+    pub online: Rate,
 }
 
 #[derive(Debug, Deserialize)]
@@ -43,6 +45,20 @@ pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Resul
             rate_type: RateType::Cash,
             buy: item.cash.buy,
             sell: item.cash.sell,
+        });
+        rates.push(ModRate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::Card,
+            buy: item.card.buy,
+            sell: item.card.sell,
+        });
+        rates.push(ModRate {
+            from: from.clone(),
+            to: to.clone(),
+            rate_type: RateType::Online,
+            buy: item.online.buy,
+            sell: item.online.sell,
         });
     }
     Ok(rates)

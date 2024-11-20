@@ -9,6 +9,8 @@ pub struct Response {
     pub non_cash: Vec<Item>,
     #[serde(rename = "Cash")]
     pub cash: Vec<Item>,
+    #[serde(rename = "Card")]
+    pub card: Vec<Item>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,6 +37,7 @@ pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Resul
     for (rate_type, rates) in [
         (RateType::NoCash, resp.non_cash),
         (RateType::Cash, resp.cash),
+        (RateType::Card, resp.card),
     ] {
         let rates = rates
             .iter()

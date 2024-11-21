@@ -30,6 +30,7 @@ pub mod mir;
 pub mod moex;
 pub mod sas;
 pub mod unibank;
+pub mod unionpay;
 pub mod unistream;
 pub mod vtb;
 
@@ -110,6 +111,7 @@ pub struct Config {
     pub moex: moex::Config,
     pub sas: sas::Config,
     pub unibank: unibank::Config,
+    pub unionpay: unionpay::Config,
     pub unistream: unistream::Config,
     pub vtb: vtb::Config,
     pub idpay: idpay::Config,
@@ -143,6 +145,7 @@ impl Config {
             Source::MOEX => self.moex.enabled,
             Source::SAS => self.sas.enabled,
             Source::Unibank => self.unibank.enabled,
+            Source::UnionPay => self.unionpay.enabled,
             Source::Unistream => self.unistream.enabled,
             Source::Vtb => self.vtb.enabled,
         }
@@ -241,6 +244,7 @@ pub enum Source {
     Vtb,
     Artsakh,
     Unibank,
+    UnionPay,
     Unistream,
     Amio,
     Byblos,
@@ -276,6 +280,7 @@ impl Source {
             Self::SAS,
             Self::Avosend,
             Self::Kwikpay,
+            Self::UnionPay,
             Self::Unistream,
         ]
         .contains(self)
@@ -387,6 +392,7 @@ pub async fn collect(
         Source::SAS => sas::collect(client, &config.sas).await?,
         Source::HSBC => hsbc::collect(client, &config.hsbc).await?,
         Source::Avosend => avosend::collect(client, &config.avosend).await?,
+        Source::UnionPay => unionpay::collect(client, &config.unionpay).await?,
         Source::Unistream => unistream::collect(client, &config.unistream).await?,
     };
     Ok(rates)
@@ -582,6 +588,13 @@ mod tests {
     async fn test_avosend() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
         let _ = collect(&client, &CFG.src, Source::Avosend).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_unionpay() -> anyhow::Result<()> {
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::UnionPay).await?;
         Ok(())
     }
 

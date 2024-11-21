@@ -120,6 +120,10 @@ enabled = true
 rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
 enabled = true
 
+[src.unionpay]
+rates_url = "https://www.unionpayintl.com/upload/jfimg/%s.json"
+enabled = true
+
 [src.unistream]
 rates_url = "https://force.unibank.am:9443/xmlParser_mob.php"
 enabled = true

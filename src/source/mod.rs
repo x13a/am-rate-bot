@@ -531,6 +531,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(feature = "github_ci", ignore)]
     async fn test_byblos() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
         let _ = collect(&client, &CFG.src, Source::Byblos).await?;

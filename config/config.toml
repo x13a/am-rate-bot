@@ -5,7 +5,7 @@ update_interval = 300
 welcome_msg = "Meow!"
 
 [bot.webhook]
-url = "https://<HOST>/am-rate-bot/webhook/"
+url = "https://<HOST>/am-rate-bot/webhook"
 port = 8000
 cert = "./certs/cert.pem"
 
@@ -18,15 +18,15 @@ rates_url = "https://mobile.aeb.am/mobile-proxy-exchange-rates/rate-settings"
 enabled = true
 
 [src.ameria]
-rates_url = "https://online.ameriabank.am/InternetBank/Api/exchangeRates/"
+rates_url = "https://online.ameriabank.am/InternetBank/Api/exchangeRates/%d"
 enabled = true
 
 [src.amio]
-rates_url = "https://internetbank.amiobank.am/InternetBank/api/exchangeRates/"
+rates_url = "https://internetbank.amiobank.am/InternetBank/api/exchangeRates/%d"
 enabled = true
 
 [src.ararat]
-rates_url = "https://direct.araratbank.am/InternetBank/Api/exchangeRates/"
+rates_url = "https://direct.araratbank.am/InternetBank/Api/exchangeRates/%d"
 enabled = true
 
 [src.ardshin]
@@ -57,7 +57,7 @@ req.summ_send = 10000
 req.direction = "from"
 
 [src.byblos]
-rates_url = "https://online.byblosbankarmenia.am/InternetBank/api/exchangeRates/"
+rates_url = "https://online.byblosbankarmenia.am/InternetBank/api/exchangeRates/%d"
 enabled = true
 
 [src.cb]
@@ -69,15 +69,15 @@ rates_url = "https://sapi.conversebank.am/api/v2/currencyrates"
 enabled = true
 
 [src.evoca]
-rates_url = "https://online.evocabank.am/InternetBank/Api/exchangeRates/"
+rates_url = "https://online.evocabank.am/InternetBank/Api/exchangeRates/%d"
 enabled = true
 
 [src.fast]
-rates_url = "https://mobileapi.fcc.am/FCBank.Mobile.Api_V2/api/publicInfo/getRates?langID=2&payType="
+rates_url = "https://mobileapi.fcc.am/FCBank.Mobile.Api_V2/api/publicInfo/getRates?langID=2&payType=%d"
 enabled = true
 
 [src.hsbc]
-rates_url = "https://www.hsbc.am/en-am/help/rates/"
+rates_url = "https://www.hsbc.am/en-am/help/rates"
 enabled = true
 
 [src.idbank]

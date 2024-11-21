@@ -75,7 +75,11 @@ where
         Error::InvalidRateType
     );
     let resp = client
-        .get(format!("{}{}", config.rates_url(), rate_type as u8))
+        .get(
+            config
+                .rates_url()
+                .replace("%d", (rate_type as u8).to_string().as_str()),
+        )
         .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send()
         .await?

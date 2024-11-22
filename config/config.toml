@@ -77,7 +77,7 @@ rates_url = "https://mobileapi.fcc.am/FCBank.Mobile.Api_V2/api/publicInfo/getRat
 enabled = true
 
 [src.hsbc]
-rates_url = "https://www.hsbc.am/en-am/help/rates"
+rates_url = "https://www.hsbc.am/en-am/help/rates/"
 enabled = true
 
 [src.idbank]

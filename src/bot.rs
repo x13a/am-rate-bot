@@ -373,7 +373,7 @@ async fn src_repl(
     db: Arc<Database>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cached = db.get_cache_src(src, rate_type).await;
-    let mut s = match cached {
+    let s = match cached {
         Some(s) => s,
         None => {
             log::debug!("empty cache src");
@@ -382,13 +382,12 @@ async fn src_repl(
             if !s.is_empty() {
                 s = html::code_inline(&s);
                 db.set_cache_src(src, rate_type, s.clone()).await;
+            } else {
+                s = DUNNO.into()
             }
             s
         }
     };
-    if s.is_empty() {
-        s = DUNNO.into()
-    }
     bot.send_message(msg.chat.id, s).await?;
     Ok(())
 }
@@ -411,7 +410,7 @@ async fn conv_repl(
         let cached = db
             .get_cache_conv(from.clone(), to.clone(), rate_type, is_inv)
             .await;
-        let mut s = match cached {
+        let s = match cached {
             Some(s) => s,
             None => {
                 log::debug!("empty cache conv");
@@ -421,13 +420,12 @@ async fn conv_repl(
                     s = html::code_block(&s);
                     db.set_cache_conv(from.clone(), to.clone(), rate_type, is_inv, s.clone())
                         .await;
+                } else {
+                    s = DUNNO.into()
                 }
                 s
             }
         };
-        if s.is_empty() {
-            s = DUNNO.into()
-        }
         bot.send_message(msg.chat.id, s).await?;
         std::mem::swap(&mut from, &mut to);
     }

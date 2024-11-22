@@ -28,7 +28,7 @@ pub struct Webhook {
 
 impl Config {
     pub fn load() -> anyhow::Result<Arc<Self>> {
-        let cfg = toml::from_str(fs::read_to_string(env::var(ENV_CONFIG)?)?.as_str())?;
+        let cfg = toml::from_str(&fs::read_to_string(env::var(ENV_CONFIG)?)?)?;
         Ok(Arc::new(cfg))
     }
 }

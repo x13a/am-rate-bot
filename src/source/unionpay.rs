@@ -33,7 +33,7 @@ pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Resul
     let mut config = config.clone();
     config.rates_url = config
         .rates_url
-        .replace("%s", date.format("%Y%m%d").to_string().as_str());
+        .replace("%s", &date.format("%Y%m%d").to_string());
     let resp: Response = get_json(client, &config).await?;
     let from = Currency::usd();
     let to = Currency::rub();

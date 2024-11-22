@@ -305,7 +305,8 @@ async fn start_repl(
     cfg: Arc<Config>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if value.is_empty() {
-        bot.send_message(msg.chat.id, &cfg.bot.welcome_msg).await?;
+        bot.send_message(msg.chat.id, html::escape(&cfg.bot.welcome_msg))
+            .await?;
         return Ok(());
     }
     let mut value = value.clone();

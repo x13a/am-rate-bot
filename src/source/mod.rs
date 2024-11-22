@@ -78,7 +78,7 @@ where
         .get(
             config
                 .rates_url()
-                .replace("%d", (rate_type as u8).to_string().as_str()),
+                .replace("%d", &(rate_type as u8).to_string()),
         )
         .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send()

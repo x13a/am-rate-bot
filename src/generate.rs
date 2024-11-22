@@ -1,7 +1,6 @@
 use crate::{
     graph,
     source::{Currency, Rate, RateType, Source},
-    DUNNO,
 };
 use rust_decimal::{Decimal, RoundingStrategy};
 use std::{collections::HashMap, fmt::Write};
@@ -17,7 +16,7 @@ pub fn conv_table(
     inv: bool,
 ) -> String {
     if from.is_empty() || to.is_empty() {
-        return DUNNO.into();
+        return "".into();
     }
 
     #[derive(Debug)]
@@ -130,11 +129,7 @@ pub fn conv_table(
         )
         .unwrap();
     }
-    if s.is_empty() {
-        DUNNO.into()
-    } else {
-        s
-    }
+    s
 }
 
 fn decimal_to_string(value: Decimal, dp: u32) -> String {
@@ -146,7 +141,7 @@ fn decimal_to_string(value: Decimal, dp: u32) -> String {
 
 pub fn src_table(src: Source, rates: &HashMap<Source, Vec<Rate>>, rate_type: RateType) -> String {
     let Some(rates) = rates.get(&src) else {
-        return DUNNO.into();
+        return "".into();
     };
 
     #[derive(Debug)]
@@ -193,11 +188,7 @@ pub fn src_table(src: Source, rates: &HashMap<Source, Vec<Rate>>, rate_type: Rat
         )
         .unwrap();
     }
-    if s.is_empty() {
-        DUNNO.into()
-    } else {
-        s
-    }
+    s
 }
 
 #[cfg(test)]

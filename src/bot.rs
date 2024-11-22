@@ -373,17 +373,23 @@ async fn src_repl(
     db: Arc<Database>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cached = db.get_cache_src(src, rate_type).await;
-    let s = match cached {
+    let mut s = match cached {
         Some(s) => s,
         None => {
             log::debug!("empty cache src");
             let rates = db.get_rates().await;
-            let s = generate::src_table(src, &rates, rate_type);
-            db.set_cache_src(src, rate_type, s.clone()).await;
+            let mut s = generate::src_table(src, &rates, rate_type);
+            if !s.is_empty() {
+                s = html::code_inline(&s);
+                db.set_cache_src(src, rate_type, s.clone()).await;
+            }
             s
         }
     };
-    bot.send_message(msg.chat.id, html::code_inline(&s)).await?;
+    if s.is_empty() {
+        s = DUNNO.into()
+    }
+    bot.send_message(msg.chat.id, s).await?;
     Ok(())
 }
 
@@ -405,17 +411,24 @@ async fn conv_repl(
         let cached = db
             .get_cache_conv(from.clone(), to.clone(), rate_type, is_inv)
             .await;
-        let s = match cached {
+        let mut s = match cached {
             Some(s) => s,
             None => {
                 log::debug!("empty cache conv");
-                let s = generate::conv_table(from.clone(), to.clone(), &rates, rate_type, is_inv);
-                db.set_cache_conv(from.clone(), to.clone(), rate_type, is_inv, s.clone())
-                    .await;
+                let mut s =
+                    generate::conv_table(from.clone(), to.clone(), &rates, rate_type, is_inv);
+                if !s.is_empty() {
+                    s = html::code_block(&s);
+                    db.set_cache_conv(from.clone(), to.clone(), rate_type, is_inv, s.clone())
+                        .await;
+                }
                 s
             }
         };
-        bot.send_message(msg.chat.id, html::code_block(&s)).await?;
+        if s.is_empty() {
+            s = DUNNO.into()
+        }
+        bot.send_message(msg.chat.id, s).await?;
         std::mem::swap(&mut from, &mut to);
     }
     Ok(())

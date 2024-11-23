@@ -1,8 +1,9 @@
 #[cfg(feature = "moex")]
 use crate::source::moex;
 use crate::{
+    config::Config,
     graph,
-    source::{self, Config, Rate, RateType, Source},
+    source::{self, Rate, RateType, Source},
 };
 use rust_decimal::Decimal;
 use std::sync::Arc;
@@ -13,7 +14,7 @@ use tokio::sync::mpsc;
 
 pub async fn collect(
     client: &reqwest::Client,
-    cfg: &Config,
+    cfg: Arc<Config>,
     tx: mpsc::Sender<(Source, Vec<Rate>)>,
 ) {
     #[cfg(feature = "moex")]
@@ -22,8 +23,7 @@ pub async fn collect(
             .unwrap_or_default()
             .is_empty()
     });
-    let cfg = Arc::new(cfg.clone());
-    for src in Source::iter().filter(|v| cfg.is_enabled_for(*v)) {
+    for src in Source::iter().filter(|v| cfg.src.is_enabled_for(*v)) {
         #[cfg(feature = "moex")]
         if src == Source::MOEX && !MOEX_OK.clone() {
             continue;
@@ -32,7 +32,7 @@ pub async fn collect(
         let cfg = cfg.clone();
         let tx = tx.clone();
         tokio::spawn(async move {
-            let result = source::collect(&client, &cfg, src).await;
+            let result = source::collect(&client, &cfg.src, src).await;
             match result {
                 Ok(rates) => {
                     let rates = rates

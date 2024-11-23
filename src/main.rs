@@ -34,7 +34,7 @@ async fn collect_loop(db: Arc<Database>, cfg: Arc<Config>) -> anyhow::Result<()>
         {
             let tx = tx.clone();
             tokio::spawn(async move {
-                collector::collect(&client, &cfg.src, tx).await;
+                collector::collect(&client, cfg, tx).await;
             });
         }
         drop(tx);

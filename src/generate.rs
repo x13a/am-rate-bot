@@ -198,7 +198,10 @@ pub fn src_table(
 mod tests {
     use super::*;
     use crate::{collector, config::Config};
-    use std::{sync::LazyLock, time::Duration};
+    use std::{
+        sync::{Arc, LazyLock},
+        time::Duration,
+    };
     use strum::{EnumCount, IntoEnumIterator};
     use tokio::sync::mpsc;
 
@@ -227,11 +230,11 @@ mod tests {
         let mut result = HashMap::new();
         let (tx, mut rx) = mpsc::channel(Source::COUNT);
         let client = client.clone();
-        let cfg = CFG.clone();
+        let cfg = Arc::new(CFG.clone());
         {
             let tx = tx.clone();
             tokio::spawn(async move {
-                collector::collect(&client, &cfg.src, tx).await;
+                collector::collect(&client, cfg, tx).await;
             });
         }
         drop(tx);

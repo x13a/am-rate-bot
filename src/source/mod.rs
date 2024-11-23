@@ -42,7 +42,7 @@ pub struct BaseResponse {
 }
 
 pub trait BaseConfigTrait {
-    fn rates_url(&self) -> String;
+    fn rates_url(&self) -> &str;
 }
 
 pub async fn get_json<T1, T2>(client: &reqwest::Client, config: &T2) -> anyhow::Result<T1>
@@ -163,8 +163,8 @@ pub struct BaseConfig {
 }
 
 impl BaseConfigTrait for BaseConfig {
-    fn rates_url(&self) -> String {
-        self.rates_url.clone()
+    fn rates_url(&self) -> &str {
+        &self.rates_url
     }
 }
 

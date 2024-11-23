@@ -13,8 +13,8 @@ pub struct Config {
 }
 
 impl BaseConfigTrait for Config {
-    fn rates_url(&self) -> String {
-        self.rates_url.clone()
+    fn rates_url(&self) -> &str {
+        &self.rates_url
     }
 }
 

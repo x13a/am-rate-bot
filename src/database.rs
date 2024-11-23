@@ -45,8 +45,8 @@ impl Cache {
 
     fn add_conv(
         &mut self,
-        from: Currency,
-        to: Currency,
+        from: &Currency,
+        to: &Currency,
         rate_type: RateType,
         inv: bool,
         value: String,
@@ -69,8 +69,8 @@ impl Cache {
 
     fn get_conv(
         &self,
-        from: Currency,
-        to: Currency,
+        from: &Currency,
+        to: &Currency,
         rate_type: RateType,
         inv: bool,
     ) -> Option<String> {
@@ -85,8 +85,8 @@ impl Cache {
 
     fn format_conv_key(
         &self,
-        from: Currency,
-        to: Currency,
+        from: &Currency,
+        to: &Currency,
         rate_type: RateType,
         inv: bool,
     ) -> String {
@@ -137,8 +137,8 @@ impl Database {
 
     pub async fn get_cache_conv(
         &self,
-        from: Currency,
-        to: Currency,
+        from: &Currency,
+        to: &Currency,
         rate_type: RateType,
         inv: bool,
     ) -> Option<String> {
@@ -153,8 +153,8 @@ impl Database {
 
     pub async fn set_cache_conv(
         &self,
-        from: Currency,
-        to: Currency,
+        from: &Currency,
+        to: &Currency,
         rate_type: RateType,
         inv: bool,
         value: String,

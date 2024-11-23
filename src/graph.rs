@@ -33,8 +33,8 @@ pub fn build(rates: &[Rate], rate_type: RateType) -> HashMap<Currency, Vec<Edge>
 
 pub fn find_all_paths(
     graph: &HashMap<Currency, Vec<Edge>>,
-    from: Currency,
-    to: Currency,
+    from: &Currency,
+    to: &Currency,
 ) -> Vec<(Vec<Currency>, Decimal)> {
     let mut paths = Vec::new();
     let mut path = Vec::new();
@@ -53,8 +53,8 @@ pub fn find_all_paths(
 
 fn dfs(
     graph: &HashMap<Currency, Vec<Edge>>,
-    from: Currency,
-    to: Currency,
+    from: &Currency,
+    to: &Currency,
     visited: &mut HashSet<Currency>,
     path: &mut Vec<Currency>,
     paths: &mut Vec<(Vec<Currency>, Decimal)>,
@@ -71,15 +71,7 @@ fn dfs(
                     continue;
                 }
                 let new_rate = rate * edge.rate;
-                dfs(
-                    graph,
-                    edge.to.clone(),
-                    to.clone(),
-                    visited,
-                    path,
-                    paths,
-                    new_rate,
-                );
+                dfs(graph, &edge.to, to, visited, path, paths, new_rate);
             }
         }
     }
@@ -361,8 +353,8 @@ mod tests {
         let resp: acba::Response = serde_json::from_str(ACBA_DATA)?;
         let rates = acba::parse(resp)?;
         let graph = build(&rates, RateType::NoCash);
-        for (from, to) in get_conversations() {
-            let _ = find_all_paths(&graph, from.clone(), to.clone());
+        for (from, to) in &get_conversations() {
+            let _ = find_all_paths(&graph, from, to);
         }
         Ok(())
     }

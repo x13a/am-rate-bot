@@ -151,8 +151,8 @@ async fn command(
         }
         Command::Usd | Command::UsdCash => {
             conv_repl(
-                Currency::default(),
-                Currency::usd(),
+                &Currency::default(),
+                &Currency::usd(),
                 match cmd {
                     Command::UsdCash => RateType::Cash,
                     _ => RateType::NoCash,
@@ -167,8 +167,8 @@ async fn command(
         }
         Command::Eur | Command::EurCash => {
             conv_repl(
-                Currency::default(),
-                Currency::eur(),
+                &Currency::default(),
+                &Currency::eur(),
                 match cmd {
                     Command::EurCash => RateType::Cash,
                     _ => RateType::NoCash,
@@ -183,8 +183,8 @@ async fn command(
         }
         Command::Rub | Command::RubCash => {
             conv_repl(
-                Currency::rub(),
-                Currency::default(),
+                &Currency::rub(),
+                &Currency::default(),
                 match cmd {
                     Command::RubCash => RateType::Cash,
                     _ => RateType::NoCash,
@@ -199,8 +199,8 @@ async fn command(
         }
         Command::Gel | Command::GelCash => {
             conv_repl(
-                Currency::default(),
-                Currency::new("GEL"),
+                &Currency::default(),
+                &Currency::new("GEL"),
                 match cmd {
                     Command::GelCash => RateType::Cash,
                     _ => RateType::NoCash,
@@ -215,8 +215,8 @@ async fn command(
         }
         Command::RubUsd | Command::RubUsdCash => {
             conv_repl(
-                Currency::rub(),
-                Currency::usd(),
+                &Currency::rub(),
+                &Currency::usd(),
                 match cmd {
                     Command::RubUsdCash => RateType::Cash,
                     _ => RateType::NoCash,
@@ -231,8 +231,8 @@ async fn command(
         }
         Command::RubEur | Command::RubEurCash => {
             conv_repl(
-                Currency::rub(),
-                Currency::eur(),
+                &Currency::rub(),
+                &Currency::eur(),
                 match cmd {
                     Command::RubEurCash => RateType::Cash,
                     _ => RateType::NoCash,
@@ -247,8 +247,8 @@ async fn command(
         }
         Command::UsdEur | Command::UsdEurCash => {
             conv_repl(
-                Currency::usd(),
-                Currency::eur(),
+                &Currency::usd(),
+                &Currency::eur(),
                 match cmd {
                     Command::UsdEurCash => RateType::Cash,
                     _ => RateType::NoCash,
@@ -263,13 +263,13 @@ async fn command(
         }
         Command::Conv { ref from, ref to } | Command::ConvCash { ref from, ref to } => {
             conv_repl(
-                from.clone(),
-                to.clone(),
+                from,
+                to,
                 match cmd {
                     Command::ConvCash { .. } => RateType::Cash,
                     _ => RateType::NoCash,
                 },
-                *to == Currency::default(),
+                to == &Currency::default(),
                 bot,
                 msg,
                 db,
@@ -314,7 +314,7 @@ fn parse_conv(s: String) -> Result<(Currency, Currency), ParseError> {
 }
 
 async fn start_repl(
-    value: String,
+    mut value: String,
     bot: Bot,
     msg: Message,
     db: Arc<Database>,
@@ -325,7 +325,6 @@ async fn start_repl(
             .await?;
         return Ok(());
     }
-    let mut value = value.clone();
     let mut rate_type = RateType::NoCash;
     if let Some((main, param)) = value.split_once(':') {
         if let Ok(v) = RateType::from_str(param.trim()) {
@@ -339,8 +338,8 @@ async fn start_repl(
     }
     let (from, to) = parse_conv(value).unwrap();
     conv_repl(
-        from.clone(),
-        to.clone(),
+        &from,
+        &to,
         rate_type,
         to == Currency::default(),
         bot,
@@ -411,8 +410,8 @@ async fn src_repl(
 }
 
 async fn conv_repl(
-    mut from: Currency,
-    mut to: Currency,
+    mut from: &Currency,
+    mut to: &Currency,
     rate_type: RateType,
     inv: bool,
     bot: Bot,
@@ -426,24 +425,15 @@ async fn conv_repl(
     let rates = db.get_rates().await;
     for idx in 0..2 {
         let is_inv = idx % 2 == inv as usize;
-        let cached = db
-            .get_cache_conv(from.clone(), to.clone(), rate_type, is_inv)
-            .await;
+        let cached = db.get_cache_conv(from, to, rate_type, is_inv).await;
         let s = match cached {
             Some(s) => s,
             None => {
                 log::debug!("empty cache conv");
-                let mut s = generate::conv_table(
-                    from.clone(),
-                    to.clone(),
-                    &rates,
-                    rate_type,
-                    is_inv,
-                    &cfg.gen,
-                );
+                let mut s = generate::conv_table(from, to, &rates, rate_type, is_inv, &cfg.gen);
                 if !s.is_empty() {
                     s = html::code_block(&s);
-                    db.set_cache_conv(from.clone(), to.clone(), rate_type, is_inv, s.clone())
+                    db.set_cache_conv(from, to, rate_type, is_inv, s.clone())
                         .await;
                 } else {
                     s = DUNNO.into()

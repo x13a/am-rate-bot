@@ -141,21 +141,21 @@ where
 pub async fn collect(client: &reqwest::Client, config: &Config) -> anyhow::Result<Vec<Rate>> {
     let currency: CurrencyResponse = get_currency(client, config).await?;
     let order_book: GetOrderBookResponse = get_order_book(client, config).await?;
-    let to_decimal = |units: String, nano: i32| format!("{}.{}", units, nano).parse::<Decimal>();
+    let to_decimal = |units: &String, nano: i32| format!("{}.{}", units, nano).parse::<Decimal>();
     let mut rate_buy = None;
     let mut rate_sell = None;
     let nominal = to_decimal(
-        currency.instrument.nominal.units,
+        &currency.instrument.nominal.units,
         currency.instrument.nominal.nano,
     )?;
     if let Some(bid) = order_book.bids.first() {
-        let sell = to_decimal(bid.price.units.clone(), bid.price.nano)?;
+        let sell = to_decimal(&bid.price.units, bid.price.nano)?;
         if sell > Decimal::ZERO {
             rate_sell = Some(nominal / sell);
         }
     }
     if let Some(ask) = order_book.asks.first() {
-        let buy = to_decimal(ask.price.units.clone(), ask.price.nano)?;
+        let buy = to_decimal(&ask.price.units, ask.price.nano)?;
         if buy > Decimal::ZERO {
             rate_buy = Some(nominal / buy);
         }

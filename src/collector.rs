@@ -5,6 +5,7 @@ use crate::{
     source::{self, Config, Rate, RateType, Source},
 };
 use rust_decimal::Decimal;
+use std::sync::Arc;
 #[cfg(feature = "moex")]
 use std::{env, sync::LazyLock};
 use strum::IntoEnumIterator;
@@ -21,6 +22,7 @@ pub async fn collect(
             .unwrap_or_default()
             .is_empty()
     });
+    let cfg = Arc::new(cfg.clone());
     for src in Source::iter().filter(|v| cfg.is_enabled_for(*v)) {
         #[cfg(feature = "moex")]
         if src == Source::MOEX && !MOEX_OK.clone() {

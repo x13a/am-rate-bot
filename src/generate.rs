@@ -6,8 +6,8 @@ use rust_decimal::{Decimal, RoundingStrategy};
 use std::{collections::HashMap, fmt::Write};
 
 pub fn conv_table(
-    from: Currency,
-    to: Currency,
+    from: &Currency,
+    to: &Currency,
     rates: &HashMap<Source, Vec<Rate>>,
     rate_type: RateType,
     inv: bool,
@@ -37,7 +37,7 @@ pub fn conv_table(
     };
     'outer: for (src, rates) in rates {
         let graph = graph::build(&rates, rate_type);
-        let mut paths = graph::find_all_paths(&graph, from.clone(), to.clone());
+        let mut paths = graph::find_all_paths(&graph, from, to);
         if paths.is_empty() {
             continue;
         }
@@ -65,7 +65,7 @@ pub fn conv_table(
             let rate_str = decimal_to_string(rate, cfg.rate_dp);
             rate_width = rate_width.max(rate_str.len());
             table.push(Row {
-                src: src.clone(),
+                src: *src,
                 rate,
                 rate_str,
                 diff: Decimal::ZERO,
@@ -244,23 +244,9 @@ mod tests {
     #[tokio::test]
     async fn test_conv_table() -> anyhow::Result<()> {
         let rates = collect().await?;
-        for (from, to) in get_conversations() {
-            let _ = conv_table(
-                from.clone(),
-                to.clone(),
-                &rates,
-                RateType::NoCash,
-                false,
-                &CFG.gen,
-            );
-            let _ = conv_table(
-                to.clone(),
-                from.clone(),
-                &rates,
-                RateType::NoCash,
-                true,
-                &CFG.gen,
-            );
+        for (from, to) in &get_conversations() {
+            let _ = conv_table(from, to, &rates, RateType::NoCash, false, &CFG.gen);
+            let _ = conv_table(to, from, &rates, RateType::NoCash, true, &CFG.gen);
         }
         Ok(())
     }

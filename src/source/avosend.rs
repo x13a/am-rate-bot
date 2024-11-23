@@ -40,7 +40,7 @@ async fn post(client: &reqwest::Client, config: &Config) -> anyhow::Result<Respo
         direction: config.req.direction.clone(),
     };
     let mut resp = client
-        .post(config.rates_url.clone())
+        .post(&config.rates_url)
         .form(&req_data)
         .header(
             reqwest::header::CONTENT_TYPE,

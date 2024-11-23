@@ -1,6 +1,5 @@
 use crate::{
-    config,
-    graph,
+    config, graph,
     source::{Currency, Rate, RateType, Source},
 };
 use rust_decimal::{Decimal, RoundingStrategy};

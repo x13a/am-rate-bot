@@ -18,6 +18,10 @@ pub struct Bot {
     pub polling: bool,
     pub webhook: Webhook,
     pub welcome_msg: String,
+
+    pub name: String,
+    pub about: String,
+    pub description: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -4,6 +4,15 @@ reqwest_timeout = 10
 update_interval = 300
 welcome_msg = "Meow!"
 
+name = "Rate AM [🇦🇲]"
+about = "Armenia Currency Exchange Rates"
+description = """
+Armenia Currency Exchange Rates
+
+Try these:
+/rub - RUB (₽)
+/rubusd - RUB/USD (₽ - $)"""
+
 [bot.webhook]
 url = "https://<HOST>/am-rate-bot/webhook"
 port = 8000

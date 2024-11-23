@@ -87,6 +87,13 @@ pub async fn run(db: Arc<Database>, cfg: Arc<Config>) -> anyhow::Result<()> {
     unsafe {
         env::remove_var(ENV_BOT_TOKEN);
     }
+    bot.set_my_name().name(&cfg.bot.name).await?;
+    bot.set_my_short_description()
+        .short_description(&cfg.bot.about)
+        .await?;
+    bot.set_my_description()
+        .description(&cfg.bot.description)
+        .await?;
     bot.set_my_commands(Command::bot_commands()).await?;
     let handler = Update::filter_message().branch(
         dptree::entry()

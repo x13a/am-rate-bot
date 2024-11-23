@@ -1,12 +1,10 @@
 use crate::{
+    config,
     graph,
     source::{Currency, Rate, RateType, Source},
 };
 use rust_decimal::{Decimal, RoundingStrategy};
 use std::{collections::HashMap, fmt::Write};
-
-const RATE_DP: u32 = 4;
-const DIFF_DP: u32 = 2;
 
 pub fn conv_table(
     from: Currency,
@@ -14,6 +12,7 @@ pub fn conv_table(
     rates: &HashMap<Source, Vec<Rate>>,
     rate_type: RateType,
     inv: bool,
+    cfg: &config::Gen,
 ) -> String {
     if from.is_empty() || to.is_empty() {
         return "".into();
@@ -64,7 +63,7 @@ pub fn conv_table(
         }
         src_width = src_width.max(src.to_string().len());
         for (path, rate) in paths {
-            let rate_str = decimal_to_string(rate, RATE_DP);
+            let rate_str = decimal_to_string(rate, cfg.rate_dp);
             rate_width = rate_width.max(rate_str.len());
             table.push(Row {
                 src: src.clone(),
@@ -109,7 +108,7 @@ pub fn conv_table(
         if is_desc && !row.diff.is_zero() {
             row.diff = -row.diff;
         }
-        row.diff_str = decimal_to_string(row.diff, DIFF_DP);
+        row.diff_str = decimal_to_string(row.diff, cfg.diff_dp);
         diff_width = diff_width.max(row.diff_str.len());
     }
     let mut s = String::new();
@@ -139,7 +138,12 @@ fn decimal_to_string(value: Decimal, dp: u32) -> String {
         .to_string()
 }
 
-pub fn src_table(src: Source, rates: &HashMap<Source, Vec<Rate>>, rate_type: RateType) -> String {
+pub fn src_table(
+    src: Source,
+    rates: &HashMap<Source, Vec<Rate>>,
+    rate_type: RateType,
+    cfg: &config::Gen,
+) -> String {
     let Some(rates) = rates.get(&src) else {
         return "".into();
     };
@@ -162,11 +166,11 @@ pub fn src_table(src: Source, rates: &HashMap<Source, Vec<Rate>>, rate_type: Rat
     const NO_RATE: &str = "-";
     for rate in rates.iter().filter(|v| v.rate_type == rate_type) {
         let buy_str = match rate.buy {
-            Some(buy) => decimal_to_string(buy, RATE_DP),
+            Some(buy) => decimal_to_string(buy, cfg.rate_dp),
             _ => NO_RATE.into(),
         };
         let sell_str = match rate.sell {
-            Some(sell) => decimal_to_string(sell, RATE_DP),
+            Some(sell) => decimal_to_string(sell, cfg.rate_dp),
             _ => NO_RATE.into(),
         };
         let row = Row {
@@ -242,8 +246,22 @@ mod tests {
     async fn test_conv_table() -> anyhow::Result<()> {
         let rates = collect().await?;
         for (from, to) in get_conversations() {
-            let _ = conv_table(from.clone(), to.clone(), &rates, RateType::NoCash, false);
-            let _ = conv_table(to.clone(), from.clone(), &rates, RateType::NoCash, true);
+            let _ = conv_table(
+                from.clone(),
+                to.clone(),
+                &rates,
+                RateType::NoCash,
+                false,
+                &CFG.gen,
+            );
+            let _ = conv_table(
+                to.clone(),
+                from.clone(),
+                &rates,
+                RateType::NoCash,
+                true,
+                &CFG.gen,
+            );
         }
         Ok(())
     }
@@ -252,7 +270,7 @@ mod tests {
     async fn test_src_table() -> anyhow::Result<()> {
         let rates = collect().await?;
         for src in Source::iter() {
-            let _ = src_table(src, &rates, RateType::NoCash);
+            let _ = src_table(src, &rates, RateType::NoCash, &CFG.gen);
         }
         Ok(())
     }

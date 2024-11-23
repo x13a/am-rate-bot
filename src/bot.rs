@@ -154,6 +154,7 @@ async fn command(
                 bot,
                 msg,
                 db,
+                cfg,
             )
             .await?
         }
@@ -169,6 +170,7 @@ async fn command(
                 bot,
                 msg,
                 db,
+                cfg,
             )
             .await?
         }
@@ -184,6 +186,7 @@ async fn command(
                 bot,
                 msg,
                 db,
+                cfg,
             )
             .await?
         }
@@ -199,6 +202,7 @@ async fn command(
                 bot,
                 msg,
                 db,
+                cfg,
             )
             .await?
         }
@@ -214,6 +218,7 @@ async fn command(
                 bot,
                 msg,
                 db,
+                cfg,
             )
             .await?
         }
@@ -229,6 +234,7 @@ async fn command(
                 bot,
                 msg,
                 db,
+                cfg,
             )
             .await?
         }
@@ -244,6 +250,7 @@ async fn command(
                 bot,
                 msg,
                 db,
+                cfg,
             )
             .await?
         }
@@ -259,6 +266,7 @@ async fn command(
                 bot,
                 msg,
                 db,
+                cfg,
             )
             .await?;
         }
@@ -273,6 +281,7 @@ async fn command(
                 bot,
                 msg,
                 db,
+                cfg,
             )
             .await?;
         }
@@ -318,7 +327,7 @@ async fn start_repl(
         value = main.into();
     }
     if let Ok(src) = Source::from_str(value.trim()) {
-        src_repl(src, rate_type, bot, msg, db).await?;
+        src_repl(src, rate_type, bot, msg, db, cfg).await?;
         return Ok(());
     }
     let (from, to) = parse_conv(value).unwrap();
@@ -330,6 +339,7 @@ async fn start_repl(
         bot,
         msg,
         db,
+        cfg,
     )
     .await?;
     Ok(())
@@ -371,6 +381,7 @@ async fn src_repl(
     bot: Bot,
     msg: Message,
     db: Arc<Database>,
+    cfg: Arc<Config>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cached = db.get_cache_src(src, rate_type).await;
     let s = match cached {
@@ -378,7 +389,7 @@ async fn src_repl(
         None => {
             log::debug!("empty cache src");
             let rates = db.get_rates().await;
-            let mut s = generate::src_table(src, &rates, rate_type);
+            let mut s = generate::src_table(src, &rates, rate_type, &cfg.gen);
             if !s.is_empty() {
                 s = html::code_inline(&s);
                 db.set_cache_src(src, rate_type, s.clone()).await;
@@ -400,6 +411,7 @@ async fn conv_repl(
     bot: Bot,
     msg: Message,
     db: Arc<Database>,
+    cfg: Arc<Config>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if from.is_empty() || to.is_empty() {
         return dunno_repl(bot, msg).await;
@@ -414,8 +426,14 @@ async fn conv_repl(
             Some(s) => s,
             None => {
                 log::debug!("empty cache conv");
-                let mut s =
-                    generate::conv_table(from.clone(), to.clone(), &rates, rate_type, is_inv);
+                let mut s = generate::conv_table(
+                    from.clone(),
+                    to.clone(),
+                    &rates,
+                    rate_type,
+                    is_inv,
+                    &cfg.gen,
+                );
                 if !s.is_empty() {
                     s = html::code_block(&s);
                     db.set_cache_conv(from.clone(), to.clone(), rate_type, is_inv, s.clone())

@@ -9,6 +9,10 @@ url = "https://<HOST>/am-rate-bot/webhook"
 port = 8000
 cert = "./certs/cert.pem"
 
+[gen]
+rate_dp = 4
+diff_dp = 2
+
 [src.acba]
 rates_url = "https://www.acbadigital.am/api/en/v2/rates"
 enabled = true

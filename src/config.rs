@@ -7,6 +7,7 @@ const ENV_CONFIG: &str = "BOT_CONFIG";
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub bot: Bot,
+    pub gen: Gen,
     pub src: source::Config,
 }
 
@@ -24,6 +25,12 @@ pub struct Webhook {
     pub url: String,
     pub port: u16,
     pub cert: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Gen {
+    pub rate_dp: u32,
+    pub diff_dp: u32,
 }
 
 impl Config {

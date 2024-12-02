@@ -89,10 +89,6 @@ enabled = true
 rates_url = "https://mobileapi.fcc.am/FCBank.Mobile.Api_V2/api/publicInfo/getRates?langID=2&payType=%d"
 enabled = true
 
-[src.hsbc]
-rates_url = "https://www.hsbc.am/en-am/help/rates/"
-enabled = true
-
 [src.idbank]
 rates_url = "https://www.idbanking.am/api/MyInfo/getCurrencyRateMobile"
 enabled = true

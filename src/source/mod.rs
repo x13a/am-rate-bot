@@ -18,7 +18,6 @@ pub mod cb;
 pub mod converse;
 pub mod evoca;
 pub mod fast;
-pub mod hsbc;
 pub mod idbank;
 pub mod idpay;
 pub mod ineco;
@@ -105,7 +104,6 @@ pub struct Config {
     pub converse: converse::Config,
     pub evoca: evoca::Config,
     pub fast: fast::Config,
-    pub hsbc: hsbc::Config,
     pub idbank: idbank::Config,
     pub ineco: ineco::Config,
     pub kwikpay: kwikpay::Config,
@@ -138,7 +136,6 @@ impl Config {
             Source::Converse => self.converse.enabled,
             Source::Evoca => self.evoca.enabled,
             Source::Fast => self.fast.enabled,
-            Source::HSBC => self.hsbc.enabled,
             Source::IdBank => self.idbank.enabled,
             Source::IdPay => self.idpay.enabled,
             Source::Ineco => self.ineco.enabled,
@@ -259,7 +256,6 @@ pub enum Source {
     #[cfg(feature = "moex")]
     MOEX,
     SAS,
-    HSBC,
     Avosend,
 }
 
@@ -394,7 +390,6 @@ pub async fn collect(
         #[cfg(feature = "moex")]
         Source::MOEX => moex::collect(client, &config.moex).await?,
         Source::SAS => sas::collect(client, &config.sas).await?,
-        Source::HSBC => hsbc::collect(client, &config.hsbc).await?,
         Source::Avosend => avosend::collect(client, &config.avosend).await?,
         Source::UnionPay => unionpay::collect(client, &config.unionpay).await?,
         Source::Unistream => unistream::collect(client, &config.unistream).await?,
@@ -579,13 +574,6 @@ mod tests {
     async fn test_sas() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
         let _ = collect(&client, &CFG.src, Source::SAS).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_hsbc() -> anyhow::Result<()> {
-        let client = build_client(&CFG)?;
-        let _ = collect(&client, &CFG.src, Source::HSBC).await?;
         Ok(())
     }
 

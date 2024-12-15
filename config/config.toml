@@ -14,7 +14,7 @@ Try these:
 /rubusd - RUB/USD (₽ - $)"""
 
 [bot.webhook]
-url = "https://<HOST>/am-rate-bot/webhook"
+url = "https://<HOST>/tg/am-rate-bot/webhook"
 port = 8000
 cert = "./certs/cert.pem"
 

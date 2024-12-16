@@ -17,8 +17,8 @@ pub struct Bot {
     pub update_interval: u64,
     pub polling: bool,
     pub webhook: Webhook,
-    pub welcome_msg: String,
 
+    pub welcome_msg: String,
     pub name: String,
     pub about: String,
     pub description: String,

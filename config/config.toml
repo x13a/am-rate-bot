@@ -2,8 +2,8 @@
 polling = true
 reqwest_timeout = 10
 update_interval = 300
-welcome_msg = "Meow!"
 
+welcome_msg = "Meow!"
 name = "Rate AM [🇦🇲]"
 about = "Armenia Currency Exchange Rates"
 description = """

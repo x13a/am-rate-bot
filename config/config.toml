@@ -46,7 +46,11 @@ enabled = true
 rates_url = "https://website-api.ardshinbank.am/currency"
 enabled = true
 
-[src.arm_swiss]
+[src.ardshininvest]
+rates_url = "https://website-api.ardshininvestbank.am/currency"
+enabled = true
+
+[src.armswiss]
 rates_url = "https://www.armswissbank.am/include/ajax.php"
 enabled = true
 

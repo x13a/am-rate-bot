@@ -9,8 +9,9 @@ pub mod ameria;
 pub mod amio;
 pub mod ararat;
 pub mod ardshin;
-pub mod arm_swiss;
+pub mod ardshininvest;
 pub mod armsoft;
+pub mod armswiss;
 pub mod artsakh;
 pub mod avosend;
 pub mod byblos;
@@ -96,7 +97,8 @@ pub struct Config {
     pub amio: amio::Config,
     pub ararat: ararat::Config,
     pub ardshin: ardshin::Config,
-    pub arm_swiss: arm_swiss::Config,
+    pub ardshininvest: ardshininvest::Config,
+    pub armswiss: armswiss::Config,
     pub artsakh: artsakh::Config,
     pub avosend: avosend::Config,
     pub byblos: byblos::Config,
@@ -128,7 +130,8 @@ impl Config {
             Source::Amio => self.amio.enabled,
             Source::Ararat => self.ararat.enabled,
             Source::Ardshin => self.ardshin.enabled,
-            Source::ArmSwiss => self.arm_swiss.enabled,
+            Source::ArdshinInvest => self.ardshininvest.enabled,
+            Source::ArmSwiss => self.armswiss.enabled,
             Source::Artsakh => self.artsakh.enabled,
             Source::Avosend => self.avosend.enabled,
             Source::Byblos => self.byblos.enabled,
@@ -234,6 +237,7 @@ pub enum Source {
     Acba,
     Ameria,
     Ardshin,
+    ArdshinInvest,
     ArmSwiss,
     Evoca,
     Fast,
@@ -369,7 +373,8 @@ pub async fn collect(
         Source::Acba => acba::collect(client, &config.acba).await?,
         Source::Ameria => ameria::collect(client, &config.ameria).await?,
         Source::Ardshin => ardshin::collect(client, &config.ardshin).await?,
-        Source::ArmSwiss => arm_swiss::collect(client, &config.arm_swiss).await?,
+        Source::ArdshinInvest => ardshininvest::collect(client, &config.ardshininvest).await?,
+        Source::ArmSwiss => armswiss::collect(client, &config.armswiss).await?,
         Source::Cb => cb::collect(client, &config.cb).await?,
         Source::Evoca => evoca::collect(client, &config.evoca).await?,
         Source::Fast => fast::collect(client, &config.fast).await?,
@@ -434,6 +439,13 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_ardshininvest() -> anyhow::Result<()> {
+        let client = build_client(&CFG)?;
+        let _ = collect(&client, &CFG.src, Source::ArdshinInvest).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_evoca() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
         let _ = collect(&client, &CFG.src, Source::Evoca).await?;
@@ -469,7 +481,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_arm_swiss() -> anyhow::Result<()> {
+    async fn test_armswiss() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
         let _ = collect(&client, &CFG.src, Source::ArmSwiss).await?;
         Ok(())

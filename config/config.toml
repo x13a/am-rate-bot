@@ -46,7 +46,7 @@ enabled = true
 rates_url = "https://website-api.ardshinbank.am/currency"
 enabled = true
 
-[src.ardshininvest]
+[src.ardshinvest]
 rates_url = "https://website-api.ardshininvestbank.am/currency"
 enabled = true
 

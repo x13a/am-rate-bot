@@ -9,7 +9,7 @@ pub mod ameria;
 pub mod amio;
 pub mod ararat;
 pub mod ardshin;
-pub mod ardshininvest;
+pub mod ardshinvest;
 pub mod armsoft;
 pub mod armswiss;
 pub mod artsakh;
@@ -97,7 +97,7 @@ pub struct Config {
     pub amio: amio::Config,
     pub ararat: ararat::Config,
     pub ardshin: ardshin::Config,
-    pub ardshininvest: ardshininvest::Config,
+    pub ardshinvest: ardshinvest::Config,
     pub armswiss: armswiss::Config,
     pub artsakh: artsakh::Config,
     pub avosend: avosend::Config,
@@ -130,7 +130,7 @@ impl Config {
             Source::Amio => self.amio.enabled,
             Source::Ararat => self.ararat.enabled,
             Source::Ardshin => self.ardshin.enabled,
-            Source::ArdshinInvest => self.ardshininvest.enabled,
+            Source::ArdshInvest => self.ardshinvest.enabled,
             Source::ArmSwiss => self.armswiss.enabled,
             Source::Artsakh => self.artsakh.enabled,
             Source::Avosend => self.avosend.enabled,
@@ -237,7 +237,8 @@ pub enum Source {
     Acba,
     Ameria,
     Ardshin,
-    ArdshinInvest,
+    #[strum(to_string = "ArdshInv")]
+    ArdshInvest,
     ArmSwiss,
     Evoca,
     Fast,
@@ -373,7 +374,7 @@ pub async fn collect(
         Source::Acba => acba::collect(client, &config.acba).await?,
         Source::Ameria => ameria::collect(client, &config.ameria).await?,
         Source::Ardshin => ardshin::collect(client, &config.ardshin).await?,
-        Source::ArdshinInvest => ardshininvest::collect(client, &config.ardshininvest).await?,
+        Source::ArdshInvest => ardshinvest::collect(client, &config.ardshinvest).await?,
         Source::ArmSwiss => armswiss::collect(client, &config.armswiss).await?,
         Source::Cb => cb::collect(client, &config.cb).await?,
         Source::Evoca => evoca::collect(client, &config.evoca).await?,
@@ -439,9 +440,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_ardshininvest() -> anyhow::Result<()> {
+    async fn test_ardshinvest() -> anyhow::Result<()> {
         let client = build_client(&CFG)?;
-        let _ = collect(&client, &CFG.src, Source::ArdshinInvest).await?;
+        let _ = collect(&client, &CFG.src, Source::ArdshInvest).await?;
         Ok(())
     }
 

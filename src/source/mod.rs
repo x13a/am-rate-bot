@@ -237,7 +237,7 @@ pub enum Source {
     Acba,
     Ameria,
     Ardshin,
-    #[strum(to_string = "ArdshInv")]
+    #[strum(to_string = "ArdshInst")]
     ArdshInvest,
     ArmSwiss,
     Evoca,

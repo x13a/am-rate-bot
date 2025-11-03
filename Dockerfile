@@ -9,12 +9,8 @@ RUN cargo build --locked --release --bins
 FROM alpine
 
 COPY --from=0 /build/target/release/am-rate-bot /main
-LABEL com.centurylinklabs.watchtower.enable="true"
 
 USER nobody:nogroup
 STOPSIGNAL SIGINT
-
-#ENV HEALTHCHECK_ENABLED 1
-#HEALTHCHECK CMD healthy http://127.0.0.1:8000/ping || exit 1
 
 CMD ["/main"]

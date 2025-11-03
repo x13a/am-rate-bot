@@ -1,10 +1,12 @@
 services:
   bot:
     build: .
-    image: 'am-rate-bot'
-    container_name: 'am-rate-bot'
+    image: ghcr.io/x13a/am-rate-bot:latest
+    container_name: am-rate-bot
     restart: unless-stopped
     env_file:
-      - './config/bot.env'
+      - ./config/bot.env
     volumes:
-      - './config/config.toml:/config/config.toml:ro'
+      - ./config/config.toml:/config/config.toml:ro
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"

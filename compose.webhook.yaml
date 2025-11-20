@@ -13,10 +13,6 @@ services:
       - nginx
     labels:
       com.centurylinklabs.watchtower.enable: "true"
-    logging:
-      options:
-        max-size: 10m
-        max-file: "5"
 
   nginx:
     image: nginx:latest
@@ -31,10 +27,6 @@ services:
       - nginx
     labels:
       com.centurylinklabs.watchtower.enable: "true"
-    logging:
-      options:
-        max-size: 10m
-        max-file: "5"
 
 networks:
   nginx:
